@@ -1,0 +1,461 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0F8640BEEC00461F8714EF0A /* Hooky in Frameworks */ = {isa = PBXBuildFile; productRef = E296FBD5F948CC7FDD68D47C /* Hooky */; };
+		24AABAC67D447414DBE1F042 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30DA6BFA52313F85AAB17105 /* ContentView.swift */; };
+		539ACCC63111D0EBB785E5D2 /* ParcoursUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E03A2A56AD9ED6A9CD34231 /* ParcoursUITests.swift */; };
+		67EE11EFC6CB94649BDACC61 /* HookyExempleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFEE4DB6F34A6CC239C47137 /* HookyExempleApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		4A0604AD5DCE7BC833ABA502 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0680A12E93BBFE07DFF13606 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 36FA29F46EA0B1BBFCB1E0C3;
+			remoteInfo = HookyExemple;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		195F1757850DA579D7BB5B5E /* ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ios; path = ..; sourceTree = SOURCE_ROOT; };
+		30DA6BFA52313F85AAB17105 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		8E03A2A56AD9ED6A9CD34231 /* ParcoursUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParcoursUITests.swift; sourceTree = "<group>"; };
+		A318CCF1CFB55E9012056950 /* HookyExemple.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HookyExemple.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AFEE4DB6F34A6CC239C47137 /* HookyExempleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookyExempleApp.swift; sourceTree = "<group>"; };
+		BF370D54BD164F8DAFB3E66B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		D6B1AB22CC722BD6A07BD2C8 /* HookyExempleUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = HookyExempleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		947138AAED22FF06EE2696C9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0F8640BEEC00461F8714EF0A /* Hooky in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4ECE66E47A8EDF29947B3F16 = {
+			isa = PBXGroup;
+			children = (
+				85054CE585AF57A0334D4052 /* HookyExemple */,
+				A00AD8A995E61A2DECEAFDD9 /* HookyExempleUITests */,
+				5F56C0B8345340A5B6A09FBB /* Packages */,
+				7F5720E8BB3640F82A20F4A9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5F56C0B8345340A5B6A09FBB /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				195F1757850DA579D7BB5B5E /* ios */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		7F5720E8BB3640F82A20F4A9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A318CCF1CFB55E9012056950 /* HookyExemple.app */,
+				D6B1AB22CC722BD6A07BD2C8 /* HookyExempleUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		85054CE585AF57A0334D4052 /* HookyExemple */ = {
+			isa = PBXGroup;
+			children = (
+				30DA6BFA52313F85AAB17105 /* ContentView.swift */,
+				AFEE4DB6F34A6CC239C47137 /* HookyExempleApp.swift */,
+				BF370D54BD164F8DAFB3E66B /* Info.plist */,
+			);
+			path = HookyExemple;
+			sourceTree = "<group>";
+		};
+		A00AD8A995E61A2DECEAFDD9 /* HookyExempleUITests */ = {
+			isa = PBXGroup;
+			children = (
+				8E03A2A56AD9ED6A9CD34231 /* ParcoursUITests.swift */,
+			);
+			path = HookyExempleUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		36FA29F46EA0B1BBFCB1E0C3 /* HookyExemple */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3D56464B28F4AE3AC7302C6D /* Build configuration list for PBXNativeTarget "HookyExemple" */;
+			buildPhases = (
+				3F4D408EEA13B43ED110F91B /* Sources */,
+				947138AAED22FF06EE2696C9 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HookyExemple;
+			packageProductDependencies = (
+				E296FBD5F948CC7FDD68D47C /* Hooky */,
+			);
+			productName = HookyExemple;
+			productReference = A318CCF1CFB55E9012056950 /* HookyExemple.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3CA21D454A9D34A8376B2788 /* HookyExempleUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6F6F04B7D2314E170C490447 /* Build configuration list for PBXNativeTarget "HookyExempleUITests" */;
+			buildPhases = (
+				D4D1FD2175FB176680E3B74D /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E39184289BD66ABC2C6BD0D4 /* PBXTargetDependency */,
+			);
+			name = HookyExempleUITests;
+			packageProductDependencies = (
+			);
+			productName = HookyExempleUITests;
+			productReference = D6B1AB22CC722BD6A07BD2C8 /* HookyExempleUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0680A12E93BBFE07DFF13606 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					36FA29F46EA0B1BBFCB1E0C3 = {
+						ProvisioningStyle = Automatic;
+					};
+					3CA21D454A9D34A8376B2788 = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = 36FA29F46EA0B1BBFCB1E0C3;
+					};
+				};
+			};
+			buildConfigurationList = 0292271BBB257B0C79011AB4 /* Build configuration list for PBXProject "HookyExemple" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 4ECE66E47A8EDF29947B3F16;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				0C8A242A4257E5127619109A /* XCLocalSwiftPackageReference ".." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 7F5720E8BB3640F82A20F4A9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				36FA29F46EA0B1BBFCB1E0C3 /* HookyExemple */,
+				3CA21D454A9D34A8376B2788 /* HookyExempleUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3F4D408EEA13B43ED110F91B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				24AABAC67D447414DBE1F042 /* ContentView.swift in Sources */,
+				67EE11EFC6CB94649BDACC61 /* HookyExempleApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D4D1FD2175FB176680E3B74D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				539ACCC63111D0EBB785E5D2 /* ParcoursUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E39184289BD66ABC2C6BD0D4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 36FA29F46EA0B1BBFCB1E0C3 /* HookyExemple */;
+			targetProxy = 4A0604AD5DCE7BC833ABA502 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		23A181283D3D2CA42BCCC728 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		250004E188B74DD004972A25 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.heyhooky.exemple.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HookyExemple;
+			};
+			name = Debug;
+		};
+		52DAEB58DF651BAB3AF1452F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A587F1AC56E3AD025090ACB1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HookyExemple/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Hooky Example";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take a photo to send in the chat.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.heyhooky.exemple;
+				PRODUCT_NAME = "Hooky Example";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C8CF7999B9A1D756B91BD6F2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.heyhooky.exemple.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = HookyExemple;
+			};
+			name = Release;
+		};
+		FE8F14C38B46937B0884ECC8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = HookyExemple/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Hooky Example";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Take a photo to send in the chat.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.heyhooky.exemple;
+				PRODUCT_NAME = "Hooky Example";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0292271BBB257B0C79011AB4 /* Build configuration list for PBXProject "HookyExemple" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				23A181283D3D2CA42BCCC728 /* Debug */,
+				52DAEB58DF651BAB3AF1452F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		3D56464B28F4AE3AC7302C6D /* Build configuration list for PBXNativeTarget "HookyExemple" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FE8F14C38B46937B0884ECC8 /* Debug */,
+				A587F1AC56E3AD025090ACB1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6F6F04B7D2314E170C490447 /* Build configuration list for PBXNativeTarget "HookyExempleUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				250004E188B74DD004972A25 /* Debug */,
+				C8CF7999B9A1D756B91BD6F2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		0C8A242A4257E5127619109A /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E296FBD5F948CC7FDD68D47C /* Hooky */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Hooky;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0680A12E93BBFE07DFF13606 /* Project object */;
+}

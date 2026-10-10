@@ -1,0 +1,72 @@
+# L'app d'exemple du SDK iOS : elle dépend du paquet par son chemin local
+# (..). Le projet Xcode est généré par XcodeGen (`xcodegen` dans ce dossier)
+# et versionné, pour s'ouvrir sans outil de plus.
+name: HookyExemple
+options:
+  bundleIdPrefix: com.heyhooky
+  deploymentTarget:
+    iOS: "15.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+
+packages:
+  Hooky:
+    path: ..
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  HookyExemple:
+    type: application
+    platform: iOS
+    sources:
+      - path: HookyExemple
+    dependencies:
+      - package: Hooky
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.heyhooky.exemple
+        PRODUCT_NAME: Hooky Example
+        SUPPORTS_MACCATALYST: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Hooky Example
+        INFOPLIST_KEY_NSCameraUsageDescription: "Take a photo to send in the chat."
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+    info:
+      path: HookyExemple/Info.plist
+      properties:
+        # Le serveur Rails local des essais (http://localhost:3031).
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+
+  HookyExempleUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: HookyExempleUITests
+    dependencies:
+      - target: HookyExemple
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.heyhooky.exemple.uitests
+        # XCTest ne descend pas sous iOS 17 ; l'app, elle, tourne dès iOS 15.
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  HookyExemple:
+    build:
+      targets:
+        HookyExemple: all
+    test:
+      targets:
+        - HookyExempleUITests
