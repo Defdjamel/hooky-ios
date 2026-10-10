@@ -403,10 +403,11 @@ final class ChatStore: ObservableObject {
             guard token == self.token else { return }
             profileKnown = profileKnown.merging(sent)
             conversation = updated
-        } catch HookyError.http(let status, _) where status == 401 || status == 404 {
+        } catch HookyError.http(let status, _) where status == 401 {
             if token == self.token { forget() }
         } catch HookyError.http(let status, _) where (400..<500).contains(status) && status != 408 && status != 429 {
-            // Refusé tel quel : le renvoyer n'y changerait rien.
+            // Refusé tel quel (ou un serveur sans cette route : 404, sans
+            // oublier la conversation pour autant) : le renvoyer n'y changerait rien.
         } catch {
             guard token == self.token else { return }
             profileChanges = sent.merging(profileChanges)
