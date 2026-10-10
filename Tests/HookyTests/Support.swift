@@ -85,9 +85,10 @@ enum Fixtures {
     static let site = ##"{"site":{"name":"Atelier Lumen","color":"#5B4CF0","position":"right","greeting":"Bonjour !"}}"##
 
     static func message(id: Int, sender: String = "team", body: String = "Salut", at: String = "2026-10-10T09:41:00.123Z",
-                        author: String? = "Camille", attachments: String = "[]") -> String {
+                        author: String? = "Camille", attachments: String = "[]", locale: String? = nil) -> String {
         let a = author.map { "\"\($0)\"" } ?? "null"
-        return #"{"id":\#(id),"sender":"\#(sender)","author_name":\#(a),"body":"\#(body)","attachments":\#(attachments),"created_at":"\#(at)"}"#
+        let l = locale.map { #","locale":"\#($0)""# } ?? ""
+        return #"{"id":\#(id),"sender":"\#(sender)","author_name":\#(a),"body":"\#(body)","attachments":\#(attachments),"created_at":"\#(at)"\#(l)}"#
     }
 
     static func thread(_ messages: [String], token: String = "tok123", hasMore: Bool = false, closed: Bool = false) -> String {

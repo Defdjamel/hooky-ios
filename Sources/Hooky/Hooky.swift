@@ -1,6 +1,6 @@
 // L'API publique du SDK : les mêmes noms que sur Android et que la bulle web.
 //
-//   Hooky.configure(siteKey: "…")          // au lancement
+//   Hooky.configure(siteKey: "…")          // au lancement (translation: false : sans traduction)
 //   Hooky.identify(name: "Lila", email: "lila@exemple.fr", userId: "42", attributes: ["plan": "Pro"])
 //   Hooky.setAttributes(["panier": 49.9])  // données libres, fusionnées
 //   ContentView().hookyBubble()             // le bouton flottant
@@ -57,23 +57,29 @@ public final class Hooky: ObservableObject {
     ///   - siteKey: the site's public key (Hooky › Sites › Install).
     ///   - apiURL: the API address, for local tests (default `https://api.heyhooky.com`).
     ///   - language: forces the interface language (`fr`, `en`, `es`, `pt`, `it`, `de`); the device language otherwise.
-    public static func configure(siteKey: String, apiURL: URL? = nil, language: String? = nil) {
-        shared.configure(siteKey: siteKey, apiURL: apiURL, language: language, tokenStore: KeychainTokenStore(), defaults: .standard)
+    ///   - translation: offers to translate the team's messages written in another language than the interface's
+    ///     (a “Translate” link under them, and “Always translate” in the conversation's menu). On by default.
+    public static func configure(siteKey: String, apiURL: URL? = nil, language: String? = nil, translation: Bool = true) {
+        shared.configure(siteKey: siteKey, apiURL: apiURL, language: language, translation: translation,
+                         tokenStore: KeychainTokenStore(), defaults: .standard)
     }
 
-    func configure(siteKey: String, apiURL: URL?, language: String?, tokenStore: TokenStoring, defaults: UserDefaults,
-                   session: URLSession = .shared, observeLifecycle: Bool = true,
+    func configure(siteKey: String, apiURL: URL?, language: String?, translation: Bool = true, tokenStore: TokenStoring,
+                   defaults: UserDefaults, session: URLSession = .shared, observeLifecycle: Bool = true,
                    makeCable: (@MainActor (URL, String) -> ConversationCable)? = nil) {
         let key = siteKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = apiURL ?? HookyAPI.defaultBaseURL
         let texts = Texts(language: Texts.language(forced: language))
-        if let store, store.siteKey == key, store.api.baseURL == base, store.texts.language == texts.language { return }
+        if let store, store.siteKey == key, store.api.baseURL == base, store.texts.language == texts.language {
+            store.translationEnabled = translation
+            return
+        }
         let previous = store
         store?.tearDown()
         subscriptions = []
         let api = HookyAPI(baseURL: base, siteKey: key, session: session)
         let s = ChatStore(siteKey: key, api: api, texts: texts, tokenStore: tokenStore, defaults: defaults,
-                          makeCable: makeCable, observeLifecycle: observeLifecycle)
+                          makeCable: makeCable, observeLifecycle: observeLifecycle, translation: translation)
         // Ce que l'app a dit du visiteur suit le changement de configuration.
         if let previous {
             s.identify(name: previous.identity?.name, email: previous.identity?.email, userID: previous.userID,

@@ -119,6 +119,9 @@ struct ChatView: View {
                 }
             }
             Spacer(minLength: 8)
+            if store.offersTranslation {
+                TranslationMenu(store: store, accent: accent)
+            }
             Button(action: close) {
                 Image(systemName: "xmark")
                     .font(.system(size: 15, weight: .bold))
@@ -226,7 +229,12 @@ struct ChatView: View {
                 MessageRow(message: m, first: first, last: last, accent: accent, texts: t, downloading: downloading,
                            openImage: { i in viewer = ViewerItem(images: m.images, start: i) },
                            openFile: open,
-                           onExpired: { store.refreshLinks() })
+                           onExpired: { store.refreshLinks() },
+                           shownText: store.shownBody(m),
+                           translatable: store.canTranslate(m),
+                           translation: store.translationState(m),
+                           translate: { store.translate(m) },
+                           toggleOriginal: { store.toggleOriginal(m) })
             case .time(let date, let fromTeam, let read, _):
                 (Text(t.time(date)) + (read ? Text(" · ") + Text(t("lu")).foregroundColor(Theme.read).fontWeight(.semibold) : Text("")))
                     .font(.caption2)
@@ -309,6 +317,90 @@ private struct BottomAnchored: ViewModifier {
     }
 }
 
+// MARK: - La traduction
+
+// Le menu de l'en-tête : « Toujours traduire », proposé dès qu'un message de
+// l'équipe est dans une autre langue.
+struct TranslationMenu: View {
+    @ObservedObject var store: ChatStore
+    let accent: Accent
+
+    var body: some View {
+        Menu {
+            Toggle(isOn: Binding(get: { store.alwaysTranslate }, set: { store.setAlwaysTranslate($0) })) {
+                Label(store.texts("toujours"), systemImage: "translate")
+            }
+            .accessibilityIdentifier("hooky.alwaysTranslate")
+        } label: {
+            Image(systemName: "translate")
+                .font(.system(size: 15, weight: .bold))
+                .frame(width: 36, height: 36)
+                .background(Circle().fill(accent.ink.opacity(0.16)))
+                .contentShape(Circle())
+        }
+        .accessibilityLabel(Text(store.texts("options_trad")))
+        .accessibilityIdentifier("hooky.translationMenu")
+    }
+}
+
+// La ligne sous un message de l'équipe dans une autre langue : « Traduire »,
+// « Traduction… », l'erreur avec « Réessayer », ou « Traduit de l’anglais ·
+// Voir l’original » (et « Voir la traduction » en retour).
+struct TranslationLine: View {
+    let state: TranslationState?
+    let texts: Texts
+    let translate: () -> Void
+    let toggle: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            switch state {
+            case nil:
+                Image(systemName: "translate")
+                    .font(.caption2.weight(.semibold))
+                    .accessibilityHidden(true)
+                link(texts("traduire"), action: translate)
+                    .accessibilityIdentifier("hooky.translate")
+            case .loading:
+                Text(texts("traduction"))
+                    .accessibilityIdentifier("hooky.translating")
+            case .failed:
+                Text(texts("trad_erreur"))
+                    .foregroundColor(Theme.error)
+                link(texts("reessayer"), action: translate)
+                    .accessibilityIdentifier("hooky.translate.retry")
+            case .done(_, let source, let original):
+                if original {
+                    link(texts("voir_traduction"), action: toggle)
+                        .accessibilityIdentifier("hooky.translate.show")
+                } else {
+                    Text(texts.translatedFrom(source) + " ·")
+                        .accessibilityIdentifier("hooky.translated")
+                    link(texts("voir_original"), action: toggle)
+                        .accessibilityIdentifier("hooky.translate.original")
+                }
+            }
+        }
+        .font(.caption)
+        .foregroundColor(Theme.secondary)
+        .padding(.horizontal, 6)
+        .animation(nil, value: state)
+    }
+
+    // Un lien discret : gras, souligné, assez haut pour le doigt.
+    private func link(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .fontWeight(.bold)
+                .underline()
+                .foregroundColor(Theme.ink)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Une bulle
 
 // La forme d'une bulle : les coins côté auteur se resserrent à l'intérieur
@@ -353,8 +445,43 @@ struct MessageRow: View {
     let openImage: (Int) -> Void
     let openFile: (Attachment) -> Void
     let onExpired: () -> Void
+    // Le texte affiché (traduit ou non) et la ligne de traduction.
+    var shownText: String
+    var translatable = false
+    var translation: TranslationState?
+    var translate: () -> Void = {}
+    var toggleOriginal: () -> Void = {}
+
+    init(message: Message, first: Bool, last: Bool, accent: Accent, texts: Texts, downloading: Int?,
+         openImage: @escaping (Int) -> Void, openFile: @escaping (Attachment) -> Void, onExpired: @escaping () -> Void,
+         shownText: String? = nil, translatable: Bool = false, translation: TranslationState? = nil,
+         translate: @escaping () -> Void = {}, toggleOriginal: @escaping () -> Void = {}) {
+        self.message = message
+        self.first = first
+        self.last = last
+        self.accent = accent
+        self.texts = texts
+        self.downloading = downloading
+        self.openImage = openImage
+        self.openFile = openFile
+        self.onExpired = onExpired
+        self.shownText = shownText ?? message.body
+        self.translatable = translatable
+        self.translation = translation
+        self.translate = translate
+        self.toggleOriginal = toggleOriginal
+    }
 
     static let photoWidth: CGFloat = 240
+
+    // Le texte, dans sa langue pour VoiceOver.
+    private var text: AttributedString {
+        var a = Formatting.attributed(shownText)
+        let translated: Bool
+        if case .done(_, _, false) = translation { translated = true } else { translated = false }
+        if let code = translated ? texts.language : message.locale { a.languageIdentifier = code }
+        return a
+    }
 
     var body: some View {
         let team = message.fromTeam
@@ -381,7 +508,7 @@ struct MessageRow: View {
                     .font(.system(size: emoji == 1 ? 48 : emoji == 2 ? 42 : 36))
                     .padding(.horizontal, 2)
             } else if !message.body.isEmpty {
-                Text(Formatting.attributed(message.body))
+                Text(text)
                     .font(.body)
                     .foregroundColor(team ? Theme.ink : accent.ink)
                     .tint(team ? accent.color : accent.ink)
@@ -391,6 +518,9 @@ struct MessageRow: View {
                     .padding(.vertical, 9)
                     .background(shape.fill(team ? Theme.card : accent.color))
                     .overlay(shape.stroke(team ? Theme.hairline : Color.clear, lineWidth: 1.5))
+            }
+            if translatable {
+                TranslationLine(state: translation, texts: texts, translate: translate, toggle: toggleOriginal)
             }
         }
         .frame(maxWidth: .infinity, alignment: team ? .leading : .trailing)

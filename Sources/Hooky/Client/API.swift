@@ -130,6 +130,13 @@ struct HookyAPI: Sendable {
         _ = try await raw("POST", "/v1/widget/conversation/read", token: token)
     }
 
+    // La traduction d'un message de l'équipe vers la langue de la bulle
+    // (gardée par le serveur : la redemander ne coûte rien).
+    func translate(token: String, messageID: Int, locale: String) async throws -> Translation {
+        try await json("POST", "/v1/widget/conversation/messages/\(messageID)/translation", token: token,
+                       body: ["locale": locale], TranslationResponse.self).translation
+    }
+
     // Hooky.track : POST /v1/widget/events.
     func track(_ event: TrackedEvent) async throws {
         var body: [String: Any] = ["site_key": siteKey, "name": event.name]

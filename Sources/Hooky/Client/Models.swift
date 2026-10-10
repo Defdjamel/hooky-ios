@@ -51,7 +51,9 @@ struct Attachment: Decodable, Equatable, Sendable, Identifiable {
     }
 }
 
-// Un message (Message#payload) : du visiteur ou de l'équipe.
+// Un message (Message#payload) : du visiteur ou de l'équipe. locale : la
+// langue du texte (« en », « pt-BR »…), absente d'un serveur d'avant la
+// traduction (alors, pas de bouton « Traduire »).
 struct Message: Decodable, Equatable, Sendable, Identifiable {
     var id: Int
     var sender: String
@@ -59,22 +61,25 @@ struct Message: Decodable, Equatable, Sendable, Identifiable {
     var body: String
     var attachments: [Attachment]
     var createdAt: Date
+    var locale: String?
 
     var fromTeam: Bool { sender == "team" }
     var images: [Attachment] { attachments.filter(\.isImage) }
     var files: [Attachment] { attachments.filter { !$0.isImage } }
 
     enum CodingKeys: String, CodingKey {
-        case id, sender, authorName, body, attachments, createdAt
+        case id, sender, authorName, body, attachments, createdAt, locale
     }
 
-    init(id: Int, sender: String, authorName: String? = nil, body: String, attachments: [Attachment] = [], createdAt: Date) {
+    init(id: Int, sender: String, authorName: String? = nil, body: String, attachments: [Attachment] = [], createdAt: Date,
+         locale: String? = nil) {
         self.id = id
         self.sender = sender
         self.authorName = authorName
         self.body = body
         self.attachments = attachments
         self.createdAt = createdAt
+        self.locale = locale
     }
 
     init(from decoder: Decoder) throws {
@@ -85,7 +90,21 @@ struct Message: Decodable, Equatable, Sendable, Identifiable {
         body = try c.decodeIfPresent(String.self, forKey: .body) ?? ""
         attachments = try c.decodeIfPresent([Attachment].self, forKey: .attachments) ?? []
         createdAt = try c.decode(Date.self, forKey: .createdAt)
+        locale = try? c.decodeIfPresent(String.self, forKey: .locale)
     }
+}
+
+// POST /v1/widget/conversation/messages/:id/translation : le texte traduit
+// vers la langue demandée, et la langue d'origine détectée.
+struct Translation: Decodable, Equatable, Sendable {
+    var messageId: Int?
+    var locale: String?
+    var sourceLocale: String?
+    var body: String
+}
+
+struct TranslationResponse: Decodable, Sendable {
+    var translation: Translation
 }
 
 // Le fil : POST /v1/widget/conversations et GET /v1/widget/conversation.

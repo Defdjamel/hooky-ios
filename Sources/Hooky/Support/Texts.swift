@@ -1,7 +1,8 @@
 // Les textes de la bulle, repris de l'objet TEXTES de widget/widget.js (fr,
 // en, es, pt, it, de), plus ceux propres au natif (photothèque, appareil
 // photo, conversation close…). La langue de l'appareil, sinon l'anglais ;
-// Hooky.configure(language:) l'impose.
+// Hooky.configure(language:) l'impose. C'est aussi la langue vers laquelle
+// les messages de l'équipe se traduisent.
 import Foundation
 
 struct Texts: Sendable {
@@ -51,6 +52,36 @@ struct Texts: Sendable {
         number.numberStyle = .percent
         number.maximumFractionDigits = 0
         return number.string(from: NSNumber(value: part)) ?? "\(Int(part * 100)) %"
+    }
+
+    // « en-US » → « en » : les langues se comparent sur leur code court.
+    static func shortCode(_ locale: String?) -> String {
+        String((locale ?? "").lowercased().split(whereSeparator: { $0 == "-" || $0 == "_" }).first ?? "")
+    }
+
+    // Le nom d'une langue dans celle de la bulle (« anglais »), nil si le
+    // système ne sait pas le dire.
+    func languageName(_ code: String) -> String? {
+        guard let name = locale.localizedString(forLanguageCode: code), name.lowercased() != code.lowercased() else { return nil }
+        return name
+    }
+
+    // « Traduit de l’anglais », avec la bonne préposition dans chaque langue
+    // (comme traduitDe() de widget.js) ; « Traduit (EN) » pour une langue
+    // sans nom.
+    func translatedFrom(_ code: String) -> String {
+        guard let name = languageName(code) else { return self("traduit_code", ["code": code.uppercased()]) }
+        let vowel = name.range(of: "^[aeiouyhàâéèêëîïôûü]", options: [.regularExpression, .caseInsensitive]) != nil
+        switch language {
+        case "fr": return "Traduit " + (vowel ? "de l’" : "du ") + name
+        case "es": return "Traducido del " + name
+        case "pt": return "Traduzido do " + name
+        case "it":
+            let lo = name.range(of: "^(s[^aeiou]|z|gn|ps|x)", options: [.regularExpression, .caseInsensitive]) != nil
+            return "Tradotto " + (vowel ? "dall’" : lo ? "dallo " : "dal ") + name
+        case "de": return "Übersetzt aus dem " + (name.hasSuffix("sch") ? name + "en" : name)
+        default: return "Translated from " + name
+        }
     }
 
     // L'heure d'un message (14:02).
@@ -128,6 +159,16 @@ struct Texts: Sendable {
             "photo_n": "Photo {n} sur {total}",
             "non_lus": "{n} message(s) non lu(s)",
             "illisible": "Ce fichier n’a pas pu être lu.",
+            // La traduction des messages de l'équipe.
+            "traduire": "Traduire",
+            "traduction": "Traduction…",
+            "traduit_code": "Traduit ({code})",
+            "voir_original": "Voir l’original",
+            "voir_traduction": "Voir la traduction",
+            "trad_erreur": "Traduction impossible.",
+            "reessayer": "Réessayer",
+            "toujours": "Toujours traduire",
+            "options_trad": "Traduction",
         ],
         "en": [
             "masquer": "Hide this message",
@@ -175,6 +216,15 @@ struct Texts: Sendable {
             "photo_n": "Photo {n} of {total}",
             "non_lus": "{n} unread message(s)",
             "illisible": "This file couldn’t be read.",
+            "traduire": "Translate",
+            "traduction": "Translating…",
+            "traduit_code": "Translated ({code})",
+            "voir_original": "See original",
+            "voir_traduction": "See translation",
+            "trad_erreur": "Couldn’t translate.",
+            "reessayer": "Try again",
+            "toujours": "Always translate",
+            "options_trad": "Translation",
         ],
         "es": [
             "masquer": "Ocultar este mensaje",
@@ -222,6 +272,15 @@ struct Texts: Sendable {
             "photo_n": "Foto {n} de {total}",
             "non_lus": "{n} mensaje(s) sin leer",
             "illisible": "No se pudo leer este archivo.",
+            "traduire": "Traducir",
+            "traduction": "Traduciendo…",
+            "traduit_code": "Traducido ({code})",
+            "voir_original": "Ver el original",
+            "voir_traduction": "Ver la traducción",
+            "trad_erreur": "No se pudo traducir.",
+            "reessayer": "Reintentar",
+            "toujours": "Traducir siempre",
+            "options_trad": "Traducción",
         ],
         "pt": [
             "masquer": "Ocultar esta mensagem",
@@ -269,6 +328,15 @@ struct Texts: Sendable {
             "photo_n": "Foto {n} de {total}",
             "non_lus": "{n} mensagem(ns) não lida(s)",
             "illisible": "Não deu para ler este arquivo.",
+            "traduire": "Traduzir",
+            "traduction": "Traduzindo…",
+            "traduit_code": "Traduzido ({code})",
+            "voir_original": "Ver o original",
+            "voir_traduction": "Ver a tradução",
+            "trad_erreur": "Não foi possível traduzir.",
+            "reessayer": "Tentar de novo",
+            "toujours": "Traduzir sempre",
+            "options_trad": "Tradução",
         ],
         "it": [
             "masquer": "Nascondi questo messaggio",
@@ -316,6 +384,15 @@ struct Texts: Sendable {
             "photo_n": "Foto {n} di {total}",
             "non_lus": "{n} messaggi non letti",
             "illisible": "Impossibile leggere questo file.",
+            "traduire": "Traduci",
+            "traduction": "Traduzione…",
+            "traduit_code": "Tradotto ({code})",
+            "voir_original": "Mostra l’originale",
+            "voir_traduction": "Mostra la traduzione",
+            "trad_erreur": "Traduzione non riuscita.",
+            "reessayer": "Riprova",
+            "toujours": "Traduci sempre",
+            "options_trad": "Traduzione",
         ],
         "de": [
             "masquer": "Diese Nachricht ausblenden",
@@ -363,6 +440,15 @@ struct Texts: Sendable {
             "photo_n": "Foto {n} von {total}",
             "non_lus": "{n} ungelesene Nachricht(en)",
             "illisible": "Diese Datei konnte nicht gelesen werden.",
+            "traduire": "Übersetzen",
+            "traduction": "Wird übersetzt…",
+            "traduit_code": "Übersetzt ({code})",
+            "voir_original": "Original anzeigen",
+            "voir_traduction": "Übersetzung anzeigen",
+            "trad_erreur": "Übersetzung fehlgeschlagen.",
+            "reessayer": "Erneut versuchen",
+            "toujours": "Immer übersetzen",
+            "options_trad": "Übersetzung",
         ],
     ]
 }

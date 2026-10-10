@@ -51,6 +51,14 @@ final class ChatStore: ObservableObject {
     @Published var formName = ""
     @Published var formEmail = ""
     @Published private(set) var identity: Identity?
+    // La traduction des messages de l'équipe (voir Translation.swift) : où en
+    // est chacun, par id, et « Toujours traduire » (gardé par site).
+    @Published var translations: [Int: TranslationState] = [:]
+    @Published var alwaysTranslate: Bool
+    // Hooky.configure(translation: false) : ni bouton ni menu.
+    @Published var translationEnabled: Bool
+    var translationQueue: [Int] = []
+    var translationTask: Task<Void, Never>?
 
     struct Identity: Equatable {
         var name: String?
@@ -88,7 +96,7 @@ final class ChatStore: ObservableObject {
     var accent: HexColor { HexColor(site?.color) ?? .hookyDefault }
 
     private let tokenStore: TokenStoring
-    private let defaults: UserDefaults
+    let defaults: UserDefaults
     private let makeCable: @MainActor (URL, String) -> ConversationCable
     private let log = Logger(subsystem: "com.heyhooky.sdk", category: "Hooky")
     private var cable: ConversationCable?
@@ -107,13 +115,15 @@ final class ChatStore: ObservableObject {
     init(siteKey: String, api: HookyAPI, texts: Texts, tokenStore: TokenStoring = KeychainTokenStore(),
          defaults: UserDefaults = .standard,
          makeCable: (@MainActor (URL, String) -> ConversationCable)? = nil,
-         observeLifecycle: Bool = true, device: String? = nil) {
+         observeLifecycle: Bool = true, device: String? = nil, translation: Bool = true) {
         self.siteKey = siteKey
         self.api = api
         self.texts = texts
         self.device = device ?? DeviceName.current
         self.tokenStore = tokenStore
         self.defaults = defaults
+        self.translationEnabled = translation
+        self.alwaysTranslate = Self.storedAlwaysTranslate(defaults, siteKey: siteKey)
         let app = api.app
         self.makeCable = makeCable ?? { url, token in ConversationCable(baseURL: url, token: token, app: app) }
         self.token = tokenStore.token(for: siteKey)
@@ -184,6 +194,13 @@ final class ChatStore: ObservableObject {
         all.sort { $0.createdAt == $1.createdAt ? $0.id < $1.id : $0.createdAt < $1.createdAt }
         messages = all
         updateUnread()
+        translateNewMessages()
+    }
+
+    // La langue d'un message corrigée par la traduction.
+    func setLocale(_ locale: String?, ofMessage id: Int) {
+        guard let i = messages.firstIndex(where: { $0.id == id }) else { return }
+        messages[i].locale = locale
     }
 
     func loadOlder() async {
@@ -558,6 +575,8 @@ final class ChatStore: ObservableObject {
         lastReadSent = nil
         lastSeenTeamID = nil
         unreadCount = 0
+        // « Toujours traduire » est un réglage de l'appareil : il reste.
+        forgetTranslations()
         if clearIdentity {
             identity = nil
             userID = nil
@@ -602,6 +621,7 @@ final class ChatStore: ObservableObject {
         observers = []
         siteTask?.cancel()
         patchTask?.cancel()
+        translationTask?.cancel()
         disconnect()
     }
 }
