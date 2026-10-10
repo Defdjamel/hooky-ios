@@ -148,8 +148,8 @@ final class ConversationCable {
     private(set) var connected = false
     private(set) var subscribed = false
 
-    static let identifier = #"{"channel":"ConversationChannel","id":0}"#
-    static let typingInterval: TimeInterval = 2
+    nonisolated static let identifier = #"{"channel":"ConversationChannel","id":0}"#
+    nonisolated static let typingInterval: TimeInterval = 2
 
     private let baseURL: URL
     private let token: String
@@ -187,7 +187,7 @@ final class ConversationCable {
     // L'adresse du WebSocket : celle de l'API en ws(s)://, le jeton et la
     // présentation du client en paramètres (un WebSocket de navigateur ne
     // porte pas d'en-têtes ; ici on met les deux).
-    static func url(baseURL: URL, token: String, app: String) -> URL {
+    nonisolated static func url(baseURL: URL, token: String, app: String) -> URL {
         var c = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
         c.scheme = c.scheme == "https" ? "wss" : "ws"
         c.path = "/cable"

@@ -292,13 +292,13 @@ final class ChatStore: ObservableObject {
 
     // Lu : seulement à l'écran, app au premier plan. L'équipe voit « Lu ».
     func markRead() {
-        guard isPresented, appActive, let token, let lastTeam = messages.last(where: \.fromTeam) else { return }
-        if (lastSeenTeamID ?? 0) < lastTeam.id { lastSeenTeamID = lastTeam.id }
+        guard isPresented, appActive, let token, let lastTeam = messages.filter(\.fromTeam).map(\.id).max() else { return }
+        if (lastSeenTeamID ?? 0) < lastTeam { lastSeenTeamID = lastTeam }
         updateUnread()
-        guard lastReadSent != lastTeam.id else { return }
-        lastReadSent = lastTeam.id
+        guard lastReadSent != lastTeam else { return }
+        lastReadSent = lastTeam
         Task {
-            do { try await api.markRead(token: token) } catch { if lastReadSent == lastTeam.id { lastReadSent = nil } }
+            do { try await api.markRead(token: token) } catch { if lastReadSent == lastTeam { lastReadSent = nil } }
         }
     }
 
@@ -335,8 +335,11 @@ final class ChatStore: ObservableObject {
         attachments = []
         let sent = await send(body, files: files)
         if !sent {
+            // Le brouillon remis efface l'erreur (comme une frappe) : on la garde.
+            let message = error
             draft = body + (draft.isEmpty ? "" : "\n" + draft)
             attachments = Array((files + attachments).prefix(AttachmentRules.maxFiles))
+            error = message
         }
     }
 

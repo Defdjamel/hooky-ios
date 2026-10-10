@@ -80,6 +80,10 @@ struct ChatView: View {
         }
     }
 
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
     private func close() {
         if let onClose { onClose() } else { dismiss() }
     }
@@ -150,6 +154,8 @@ struct ChatView: View {
                 .padding(.bottom, 12)
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity)
+                // Toucher le fil range le clavier.
+                .background(Color.clear.contentShape(Rectangle()).onTapGesture(perform: hideKeyboard))
                 .animation(.easeOut(duration: 0.2), value: store.teamTypingName)
             }
             .modifier(DismissKeyboardOnScroll())

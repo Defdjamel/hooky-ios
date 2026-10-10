@@ -93,8 +93,8 @@ final class ParcoursUITests: XCTestCase {
         // La réponse de l'équipe arrive en direct (Action Cable).
         XCTAssertTrue(app.descendants(matching: .any)["hooky.message.team"].firstMatch.waitForExistence(timeout: 120),
                       "pas de réponse de l'équipe")
-        // Le clavier rangé, la photo de l'équipe chargée.
-        app.swipeDown(velocity: .slow)
+        // Le clavier rangé (un toucher sur le fil), la photo de l'équipe chargée.
+        app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Aujourd'")).firstMatch.tap()
         sleep(4)
         capture(app, "3-conversation")
 
