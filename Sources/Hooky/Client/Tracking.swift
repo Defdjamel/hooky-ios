@@ -2,7 +2,7 @@
 // properties: ["plan": "pro"]). Comme Hooky.track de la bulle web.
 import Foundation
 
-/// A property value attached to a tracked event: a string, a number or a boolean.
+/// A value attached to a tracked event or to the user (`setAttributes`): a string, a number or a boolean.
 ///
 /// Literals work directly: `["plan": "pro", "seats": 3, "trial": true]`.
 public enum HookyValue: Sendable, Equatable, ExpressibleByStringLiteral, ExpressibleByIntegerLiteral,

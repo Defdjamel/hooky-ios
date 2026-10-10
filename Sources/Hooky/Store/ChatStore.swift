@@ -57,6 +57,22 @@ final class ChatStore: ObservableObject {
         var email: String?
     }
 
+    // identify(userId:) et les données libres (setAttributes) : tout part
+    // avec le premier message ; ensuite, ce qui change part par PATCH.
+    private(set) var userID: String?
+    private(set) var attributes: [String: HookyValue] = [:]
+    // Ce que le serveur ne sait pas encore, et ce qu'il sait déjà (envoyé
+    // pendant cette vie de l'app : un identify répété à chaque lancement ne
+    // part qu'une fois).
+    private(set) var profileChanges = ProfileChanges()
+    private var profileKnown = ProfileChanges()
+    private var patchTask: Task<Void, Never>?
+    private var patchScheduled = false
+    // Plusieurs changements en moins d'une seconde : un seul appel.
+    var patchDelay: TimeInterval = 1
+    // « iPhone 15 Pro · iOS 18.2 ».
+    let device: String
+
     var sending: Bool { pending != nil }
 
     // Le message en route est peut-être déjà arrivé par le direct, avant la
@@ -91,10 +107,11 @@ final class ChatStore: ObservableObject {
     init(siteKey: String, api: HookyAPI, texts: Texts, tokenStore: TokenStoring = KeychainTokenStore(),
          defaults: UserDefaults = .standard,
          makeCable: (@MainActor (URL, String) -> ConversationCable)? = nil,
-         observeLifecycle: Bool = true) {
+         observeLifecycle: Bool = true, device: String? = nil) {
         self.siteKey = siteKey
         self.api = api
         self.texts = texts
+        self.device = device ?? DeviceName.current
         self.tokenStore = tokenStore
         self.defaults = defaults
         let app = api.app
@@ -141,6 +158,8 @@ final class ChatStore: ObservableObject {
             load(r)
             connect()
             markRead()
+            // De retour en ligne : ce qui n'était pas parti part.
+            flushProfile()
         } catch HookyError.http(let status, _) where status == 401 || status == 404 {
             forget()
         } catch {}
@@ -314,12 +333,84 @@ final class ChatStore: ObservableObject {
 
     // MARK: - L'envoi
 
-    func identify(name: String?, email: String?) {
-        let n = name?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let e = email?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = n?.isEmpty == false ? n : nil
-        let mail = e?.isEmpty == false ? e : nil
+    // Le prénom et l'e-mail remplacent les précédents (nil les efface ici,
+    // pas sur le serveur) ; userId nil ne change rien. Rend vrai si la
+    // conversation a été oubliée (un autre compte).
+    @discardableResult
+    func identify(name: String?, email: String?, userID: String? = nil, attributes: [String: HookyValue?] = [:]) -> Bool {
+        let name = cleaned(name), mail = cleaned(email), user = cleaned(userID)
+        // Un autre compte sur cet appareil : il ne voit pas le fil du précédent.
+        var switched = false
+        if let user, token != nil, let previous = tokenStore.userID(for: siteKey), previous != user {
+            forget(clearIdentity: true)
+            switched = true
+        }
         identity = name == nil && mail == nil ? nil : Identity(name: name, email: mail)
+        if let user {
+            self.userID = user
+            if token != nil { tokenStore.setUserID(user, for: siteKey) }
+        }
+        record(ProfileChanges(name: name, email: mail, userID: user, attributes: attributes))
+        return switched
+    }
+
+    func setAttributes(_ attributes: [String: HookyValue?]) {
+        record(ProfileChanges(attributes: attributes))
+    }
+
+    // Retenu pour le premier message, et pour le PATCH s'il y a déjà une
+    // conversation (sauf ce que le serveur sait déjà).
+    private func record(_ change: ProfileChanges) {
+        for (key, value) in change.attributes { attributes[key] = value }
+        var fresh = change
+        if fresh.name == profileKnown.name { fresh.name = nil }
+        if fresh.email == profileKnown.email { fresh.email = nil }
+        if fresh.userID == profileKnown.userID { fresh.userID = nil }
+        fresh.attributes = fresh.attributes.filter { key, value in
+            guard let known = profileKnown.attributes[key] else { return true }
+            return known != value
+        }
+        guard !fresh.isEmpty else { return }
+        profileChanges = profileChanges.merging(fresh)
+        schedulePatch()
+    }
+
+    // Un seul PATCH pour les changements d'une même seconde.
+    private func schedulePatch(after delay: TimeInterval? = nil) {
+        guard token != nil, !profileChanges.isEmpty, !patchScheduled else { return }
+        patchScheduled = true
+        let wait = delay ?? patchDelay
+        patchTask = Task { [weak self] in
+            if wait > 0 { try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000)) }
+            guard !Task.isCancelled else { return }
+            await self?.sendProfile()
+        }
+    }
+
+    // Ce qui attend part tout de suite (après un envoi, au retour en ligne).
+    func flushProfile() {
+        schedulePatch(after: 0)
+    }
+
+    // Jamais d'erreur affichée : hors ligne, on réessaiera au prochain envoi.
+    func sendProfile() async {
+        patchScheduled = false
+        guard let token, !profileChanges.isEmpty else { return }
+        let sent = profileChanges
+        profileChanges = ProfileChanges()
+        do {
+            let updated = try await api.updateConversation(token: token, changes: sent, device: device)
+            guard token == self.token else { return }
+            profileKnown = profileKnown.merging(sent)
+            conversation = updated
+        } catch HookyError.http(let status, _) where status == 401 || status == 404 {
+            if token == self.token { forget() }
+        } catch HookyError.http(let status, _) where (400..<500).contains(status) && status != 408 && status != 429 {
+            // Refusé tel quel : le renvoyer n'y changerait rien.
+        } catch {
+            guard token == self.token else { return }
+            profileChanges = sent.merging(profileChanges)
+        }
     }
 
     var canSend: Bool {
@@ -355,16 +446,27 @@ final class ChatStore: ObservableObject {
                 self.pending?.progress = part
             }
         }
+        // Le premier message emporte tout ce que l'app a dit du visiteur ; ce
+        // qui change pendant l'envoi partira ensuite par PATCH.
+        var held: ProfileChanges?
         do {
             if first {
                 let name = identity?.name ?? formName.trimmingCharacters(in: .whitespacesAndNewlines)
                 let email = identity?.email ?? formEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+                let user = userID, extra = attributes
+                held = profileChanges
+                profileChanges = ProfileChanges()
                 let r = try await api.createConversation(body: body, name: name, email: email, locale: texts.language,
-                                                         timeZone: TimeZone.current.identifier, files: files, progress: progress)
+                                                         timeZone: TimeZone.current.identifier, userID: user,
+                                                         attributes: extra, device: device, files: files, progress: progress)
                 guard let newToken = r.conversation.token else { throw HookyError.http(status: 500, code: nil) }
                 await ImageCache.shared.seed(files, for: r.messages)
                 token = newToken
                 tokenStore.setToken(newToken, for: siteKey)
+                tokenStore.setUserID(user, for: siteKey)
+                profileKnown = ProfileChanges(name: cleaned(name), email: cleaned(email), userID: user,
+                                              attributes: extra.mapValues { $0 })
+                held = nil
                 load(r)
                 connect()
             } else {
@@ -377,8 +479,10 @@ final class ChatStore: ObservableObject {
             }
             FilePreparation.discard(files)
             pending = nil
+            flushProfile()
             return true
         } catch {
+            if let held { profileChanges = held.merging(profileChanges) }
             pending = nil
             if !(error is CancellationError) { self.error = errorText(error) }
             return false
@@ -439,7 +543,12 @@ final class ChatStore: ObservableObject {
     func forget(clearIdentity: Bool = false) {
         disconnect()
         tokenStore.setToken(nil, for: siteKey)
+        tokenStore.setUserID(nil, for: siteKey)
         token = nil
+        patchTask?.cancel()
+        patchScheduled = false
+        profileChanges = ProfileChanges()
+        profileKnown = ProfileChanges()
         conversation = nil
         messages = []
         hasMore = false
@@ -450,6 +559,8 @@ final class ChatStore: ObservableObject {
         unreadCount = 0
         if clearIdentity {
             identity = nil
+            userID = nil
+            attributes = [:]
             formName = ""
             formEmail = ""
             draft = ""
@@ -472,6 +583,7 @@ final class ChatStore: ObservableObject {
         if conversation != nil { connect() } else { Task { await fetchConversation() } }
         markRead()
         refreshLinksIfStale()
+        flushProfile()
     }
 
     private func observe() {
@@ -488,6 +600,7 @@ final class ChatStore: ObservableObject {
         for o in observers { NotificationCenter.default.removeObserver(o) }
         observers = []
         siteTask?.cancel()
+        patchTask?.cancel()
         disconnect()
     }
 }

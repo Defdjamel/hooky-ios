@@ -95,6 +95,11 @@ struct ThreadResponse: Decodable, Sendable {
     var hasMore: Bool?
 }
 
+// PATCH /v1/widget/conversation : la conversation à jour.
+struct ConversationResponse: Decodable, Sendable {
+    var conversation: VisitorConversation
+}
+
 // POST /v1/widget/conversation/messages.
 struct MessageResponse: Decodable, Sendable {
     var message: Message

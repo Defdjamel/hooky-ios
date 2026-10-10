@@ -62,18 +62,36 @@ struct HookyAPI: Sendable {
         try await json("GET", "/v1/widget/site", query: [URLQueryItem(name: "site_key", value: siteKey)], SiteResponse.self).site
     }
 
-    // Le premier message ouvre la conversation (et rend son jeton).
+    // Le premier message ouvre la conversation (et rend son jeton). Il porte
+    // aussi ce que l'app sait du visiteur : identifiant, données libres
+    // (objet JSON ; en multipart, une chaîne JSON) et appareil.
     func createConversation(body: String, name: String?, email: String?, locale: String, timeZone: String?,
+                            userID: String? = nil, attributes: [String: HookyValue] = [:], device: String? = nil,
                             files: [OutgoingFile], progress: (@Sendable (Double) -> Void)? = nil) async throws -> ThreadResponse {
         var fields: [(String, String)] = [("site_key", siteKey), ("body", body)]
         if let name, !name.isEmpty { fields.append(("visitor_name", name)) }
         if let email, !email.isEmpty { fields.append(("visitor_email", email)) }
         fields.append(("locale", locale))
         if let timeZone { fields.append(("time_zone", timeZone)) }
+        if let userID, !userID.isEmpty { fields.append(("visitor_user_id", userID)) }
+        if let device, !device.isEmpty { fields.append(("visitor_device", device)) }
+        let extra = attributes.isEmpty ? nil : ProfileChanges.json(attributes.mapValues { $0 })
         if files.isEmpty {
-            return try await json("POST", "/v1/widget/conversations", body: Dictionary(uniqueKeysWithValues: fields), ThreadResponse.self)
+            var object: [String: Any] = Dictionary(uniqueKeysWithValues: fields)
+            if let extra { object["visitor_attributes"] = extra }
+            return try await json("POST", "/v1/widget/conversations", body: object, ThreadResponse.self)
+        }
+        if let extra, let data = try? JSONSerialization.data(withJSONObject: extra, options: [.sortedKeys]) {
+            fields.append(("visitor_attributes", String(decoding: data, as: UTF8.self)))
         }
         return try await upload("/v1/widget/conversations", fields: fields, files: files, progress: progress, ThreadResponse.self)
+    }
+
+    // identify / setAttributes sur une conversation ouverte : seuls les champs
+    // donnés changent, les données libres sont fusionnées par le serveur.
+    func updateConversation(token: String, changes: ProfileChanges, device: String?) async throws -> VisitorConversation {
+        try await json("PATCH", "/v1/widget/conversation", token: token, body: changes.body(device: device),
+                       ConversationResponse.self).conversation
     }
 
     func sendMessage(token: String, body: String, files: [OutgoingFile],
@@ -120,7 +138,7 @@ struct HookyAPI: Sendable {
     }
 
     private func json<T: Decodable>(_ method: String, _ path: String, query: [URLQueryItem] = [], token: String? = nil,
-                                    body: [String: String]? = nil, _ type: T.Type) async throws -> T {
+                                    body: [String: Any]? = nil, _ type: T.Type) async throws -> T {
         let data = try await raw(method, path, query: query, token: token,
                                  body: try body.map { try JSONSerialization.data(withJSONObject: $0) })
         return try JSON.decoder().decode(T.self, from: data)

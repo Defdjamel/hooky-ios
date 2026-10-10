@@ -1,7 +1,8 @@
 // L'API publique du SDK : les mêmes noms que sur Android et que la bulle web.
 //
 //   Hooky.configure(siteKey: "…")          // au lancement
-//   Hooky.identify(name: "Lila", email: "lila@exemple.fr")
+//   Hooky.identify(name: "Lila", email: "lila@exemple.fr", userId: "42", attributes: ["plan": "Pro"])
+//   Hooky.setAttributes(["panier": 49.9])  // données libres, fusionnées
 //   ContentView().hookyBubble()             // le bouton flottant
 //   Hooky.open() / Hooky.close()
 //   Hooky.track("signup") / Hooky.track("order", value: 49)
@@ -67,13 +68,17 @@ public final class Hooky: ObservableObject {
         let base = apiURL ?? HookyAPI.defaultBaseURL
         let texts = Texts(language: Texts.language(forced: language))
         if let store, store.siteKey == key, store.api.baseURL == base, store.texts.language == texts.language { return }
-        let identity = store?.identity
+        let previous = store
         store?.tearDown()
         subscriptions = []
         let api = HookyAPI(baseURL: base, siteKey: key, session: session)
         let s = ChatStore(siteKey: key, api: api, texts: texts, tokenStore: tokenStore, defaults: defaults,
                           makeCable: makeCable, observeLifecycle: observeLifecycle)
-        if let identity { s.identify(name: identity.name, email: identity.email) }
+        // Ce que l'app a dit du visiteur suit le changement de configuration.
+        if let previous {
+            s.identify(name: previous.identity?.name, email: previous.identity?.email, userID: previous.userID,
+                       attributes: previous.attributes.mapValues { $0 })
+        }
         store = s
         Tracker.shared.configure(api)
         s.$unreadCount.removeDuplicates().sink { [weak self] n in self?.unreadChanged(n) }.store(in: &subscriptions)
@@ -86,14 +91,43 @@ public final class Hooky: ObservableObject {
         s.start()
     }
 
-    /// Tells Hooky who the user is. Optional: sent when the conversation starts, and the chat then skips its
-    /// name and email form. Call it again with `nil` to clear.
-    public static func identify(name: String? = nil, email: String? = nil) {
+    /// Tells Hooky who the user is. Optional, never throws.
+    ///
+    /// Sent with the first message, or right away (grouped, within a second) when a conversation already exists;
+    /// retried at the next message if the device is offline. With an email, the chat skips its name and email form.
+    ///
+    /// ```swift
+    /// Hooky.identify(name: "Lila", email: "lila@example.com", userId: "42", attributes: ["plan": "Pro"])
+    /// ```
+    /// - Parameters:
+    ///   - name: the user's first name; replaces the conversation's. `nil` clears it on this device.
+    ///   - email: the user's email; replaces the conversation's. `nil` clears it on this device.
+    ///   - userId: your own identifier for the user (shown to your team, not verified). `nil` leaves it unchanged.
+    ///     A different `userId` than the current conversation's starts a new conversation, like `reset()`:
+    ///     another account on the same device never sees the previous one's thread.
+    ///   - attributes: free data shown to your team, merged with the previous ones (strings, numbers, booleans;
+    ///     `nil` removes a key). Up to 50 keys.
+    public static func identify(name: String? = nil, email: String? = nil, userId: String? = nil,
+                                attributes: [String: HookyValue?] = [:]) {
         guard let store = shared.store else {
             assertionFailure("Hooky: call Hooky.configure(siteKey:) before Hooky.identify().")
             return
         }
-        store.identify(name: name, email: email)
+        if store.identify(name: name, email: email, userID: userId, attributes: attributes) {
+            Presenter.shared.close()
+        }
+    }
+
+    /// Adds free data about the user, shown to your team next to the conversation: `["plan": "Pro", "cart": 49.9]`.
+    ///
+    /// Merged with the previous data (`nil` removes a key). Sent with the first message, or right away (grouped,
+    /// within a second) when a conversation already exists. Never throws.
+    public static func setAttributes(_ attributes: [String: HookyValue?]) {
+        guard let store = shared.store else {
+            assertionFailure("Hooky: call Hooky.configure(siteKey:) before Hooky.setAttributes().")
+            return
+        }
+        store.setAttributes(attributes)
     }
 
     // MARK: - Ouvrir, fermer
