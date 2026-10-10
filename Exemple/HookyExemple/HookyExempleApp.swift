@@ -1,5 +1,5 @@
 // L'app d'exemple du SDK Hooky : la bulle sur une page SwiftUI, avec
-// « Ouvrir », identify, track et reset.
+// « Ouvrir », identify (et « Se connecter »), setAttributes, track et reset.
 //
 // La clé du site et l'adresse de l'API viennent des variables
 // d'environnement de lancement (schéma Xcode, ou SIMCTL_CHILD_… avec

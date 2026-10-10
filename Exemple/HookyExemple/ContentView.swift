@@ -1,5 +1,6 @@
 // La page de démonstration : ouvrir la conversation, dire qui est
-// l'utilisateur (identify), envoyer un événement de stats (track), oublier
+// l'utilisateur (identify, « Se connecter » avec un userId et des données
+// libres, setAttributes), envoyer un événement de stats (track), oublier
 // la conversation (reset). La bulle flotte en bas à droite (.hookyBubble()).
 import SwiftUI
 import Hooky
@@ -61,6 +62,35 @@ struct ContentView: View {
                         .controlSize(.large)
                         .disabled(name.isEmpty && email.isEmpty)
                         .accessibilityIdentifier("exemple.identify")
+
+                        // Un compte de l'app : son identifiant et des données libres, vues
+                        // par l'équipe sur la fiche de la conversation.
+                        Text(l("Signs in as user “demo-42” (plan, cart, beta tester).",
+                               "Connecte l’utilisateur « demo-42 » (formule, panier, bêta-testeur)."))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Button {
+                            Hooky.identify(name: name.isEmpty ? "Lila" : name,
+                                           email: email.isEmpty ? "lila@example.com" : email,
+                                           userId: "demo-42",
+                                           attributes: ["plan": "Pro", "cart": 49.9, "beta": true])
+                            identified = true
+                        } label: {
+                            Label(l("Sign in", "Se connecter"), systemImage: "person.crop.circle.badge.checkmark")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .accessibilityIdentifier("exemple.signin")
+                        Button {
+                            Hooky.setAttributes(["cart": .number(Double(Int.random(in: 10...200))), "last_screen": "Checkout"])
+                        } label: {
+                            Label(l("Update the cart (setAttributes)", "Changer le panier (setAttributes)"), systemImage: "cart")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                        .accessibilityIdentifier("exemple.attributes")
                     }
 
                     card("track", symbol: "chart.bar.fill") {
