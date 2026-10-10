@@ -80,6 +80,17 @@ struct ChatView: View {
         }
     }
 
+    // Les derniers messages en vue, une fois la mise en page faite.
+    private func toBottom(_ proxy: ScrollViewProxy, animated: Bool = true) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            if animated {
+                withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("bottom", anchor: .bottom) }
+            } else {
+                proxy.scrollTo("bottom", anchor: .bottom)
+            }
+        }
+    }
+
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
@@ -159,20 +170,19 @@ struct ChatView: View {
                 .animation(.easeOut(duration: 0.2), value: store.teamTypingName)
             }
             .modifier(DismissKeyboardOnScroll())
-            .onAppear {
-                DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) }
-            }
-            .onChange(of: store.messages.last?.id) { _ in
-                withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("bottom", anchor: .bottom) }
-            }
-            .onChange(of: store.pending?.startedAt) { _ in
-                withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("bottom", anchor: .bottom) }
-            }
+            .modifier(BottomAnchored())
+            .onAppear { toBottom(proxy, animated: false) }
+            .onChange(of: store.messages.last?.id) { _ in toBottom(proxy) }
+            .onChange(of: store.messages.count) { _ in toBottom(proxy) }
+            .onChange(of: store.pending?.startedAt) { _ in toBottom(proxy) }
             .onChange(of: store.teamTypingName != nil) { typing in
-                if typing { withAnimation { proxy.scrollTo("bottom", anchor: .bottom) } }
+                if typing { toBottom(proxy) }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) }
+                toBottom(proxy)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
+                toBottom(proxy)
             }
         }
     }
@@ -278,6 +288,21 @@ private struct DismissKeyboardOnScroll: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 16.0, *) {
             content.scrollDismissesKeyboard(.interactively)
+        } else {
+            content
+        }
+    }
+}
+
+// Le fil s'ouvre sur les derniers messages et les garde en vue quand il
+// grandit (clavier, nouveau message) ; court, il tient en haut (iOS 18).
+private struct BottomAnchored: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content
+                .defaultScrollAnchor(.top, for: .alignment)
+                .defaultScrollAnchor(.bottom, for: .initialOffset)
+                .defaultScrollAnchor(.bottom, for: .sizeChanges)
         } else {
             content
         }
