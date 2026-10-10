@@ -135,5 +135,12 @@ final class ParcoursUITests: XCTestCase {
         XCTAssertTrue(bubble.waitForExistence(timeout: 10))
         sleep(1)
         XCTAssertEqual(app.staticTexts["exemple.unread"].label, "0")
+
+        // Une stat (Hooky.track) : le serveur la range dans les événements du site.
+        let track = app.buttons["exemple.track"]
+        if !track.isHittable { app.swipeUp() }
+        track.tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Envoyé'")).firstMatch.waitForExistence(timeout: 5))
+        sleep(2)
     }
 }
