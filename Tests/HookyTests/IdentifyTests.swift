@@ -149,6 +149,17 @@ final class IdentifyTests: XCTestCase {
         XCTAssertTrue(store.profileChanges.isEmpty)
     }
 
+    func testServerWithoutTheRouteKeepsTheConversation() async throws {
+        serve(patchStatus: { 404 })
+        tokens.setToken("tok123", for: "KEY")
+        let store = makeStore()
+        store.setAttributes(["plan": "Pro"])
+        try await wait()
+        XCTAssertEqual(patches.count, 1)
+        XCTAssertEqual(store.token, "tok123")
+        XCTAssertEqual(tokens.token(for: "KEY"), "tok123")
+    }
+
     func testAnotherUserIdForgetsTheConversation() async throws {
         serve()
         tokens.setToken("tok123", for: "KEY")
