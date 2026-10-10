@@ -38,7 +38,8 @@ Your site's public key is in Hooky › Sites › Install (the same key as the we
 | Call | What it does |
 | --- | --- |
 | `Hooky.configure(siteKey:apiURL:language:)` | Starts the SDK: loads the site's name, color and greeting, resumes the saved conversation and opens the live connection. `apiURL` is for tests against your own server (default `https://api.heyhooky.com`); `language` forces `fr`, `en`, `es`, `pt`, `it` or `de` (the device language otherwise, English by default). |
-| `Hooky.identify(name:email:)` | Optional. Sent when the conversation starts; the chat then skips its name and email form. `nil` clears it. |
+| `Hooky.identify(name:email:userId:attributes:)` | Optional. Who the user is: name, email, your own user id and free data (see [Identify your users](#identify-your-users)). With an email, the chat skips its name and email form. |
+| `Hooky.setAttributes(_:)` | Adds free data about the user (`["plan": "Pro", "cart": 49.9]`), merged with the previous; `nil` removes a key. |
 | `Hooky.open()` / `Hooky.open(from:)` | Presents the conversation as a full-height sheet, from the top-most view controller or the one you give. |
 | `Hooky.close()` | Dismisses it. |
 | `Hooky.track(_:value:properties:)` | Sends an event to the site's stats, like `Hooky.track` on the web. Never throws, callable from any thread, even before `configure` (events wait for it). Properties are flat strings, numbers or booleans. |
@@ -50,6 +51,29 @@ Your site's public key is in Hooky › Sites › Install (the same key as the we
 Hooky.track("signup")
 Hooky.track("order", value: 49.9, properties: ["plan": "pro", "seats": 3, "trial": false])
 ```
+
+### Identify your users
+
+When your user signs in, tell Hooky who they are. Your team sees it on the conversation: name, email, your user id, the device, and the free data.
+
+```swift
+Hooky.identify(
+    name: "Lila",
+    email: "lila@example.com",
+    userId: "42",                                   // your own id for this user
+    attributes: ["plan": "Pro", "cart": 49.9, "beta": true]
+)
+
+Hooky.setAttributes(["cart": 12, "last_screen": "Checkout"])   // later, merged
+Hooky.setAttributes(["beta": nil])                             // removes a key
+
+Hooky.reset()                                       // when the user signs out
+```
+
+- Before the first message, everything is kept in memory and sent with it. Once a conversation exists, changes are sent right away, grouped (one request for all the changes made within a second). Nothing throws: offline, they are retried with the next message or when the app comes back.
+- `name` and `email` replace the conversation's; `userId: nil` leaves it unchanged.
+- The `userId` is kept with the conversation's token. If `identify` gives a **different** `userId`, the conversation is forgotten (like `reset()`): another account on the same device never sees the previous one's thread.
+- Free data: a flat object, up to 50 keys (letters, digits, spaces, `_`, `.`, `-`; 64 characters max), values are strings (500 characters max), numbers or booleans. The server cleans the rest, it never refuses a message for it. The user id is a hint for your team, not verified.
 
 ### SwiftUI
 
@@ -96,8 +120,9 @@ To offer the camera, add `NSCameraUsageDescription` to your app's Info.plist; wi
 ## What the SDK sends and stores
 
 - Every request carries `X-Hooky-Client: hooky-ios/<SDK version>` and `X-Hooky-App: <bundle id> <version> (<build>)` (also as `client` and `app` parameters on the WebSocket).
-- The conversation's token is kept in the Keychain (this device only, after first unlock), per site key. The unsent draft and the last message seen are kept in `UserDefaults`.
-- Nothing else is collected: the same data as the web bubble (messages, files, the optional name and email, language and time zone so the team replies in the right language and at the right hour).
+- The conversation's token is kept in the Keychain (this device only, after first unlock), per site key, with the `userId` given to `identify`. The unsent draft and the last message seen are kept in `UserDefaults`.
+- The device, readable: `iPhone 15 Pro · iOS 18.2`, `iPad Air 11-inch (M2) · iPadOS 18.1`, `Mac · macOS 15.1` (a model newer than the SDK shows as its identifier, like `iPhone19,1`).
+- Nothing else is collected: the same data as the web bubble (messages, files, the optional name and email, language and time zone so the team replies in the right language and at the right hour), plus what you pass to `identify` and `setAttributes`.
 
 ## Behavior
 
