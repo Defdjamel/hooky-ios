@@ -171,6 +171,27 @@ public final class Hooky: ObservableObject {
     }
 }
 
+// MARK: - Pour les surcouches du SDK
+
+// Ce dont le plugin Flutter a besoin et que l'API publique ne montre pas :
+// se présenter au serveur sous son propre nom, et lire l'apparence du site
+// pour dessiner sa bulle. Réservé aux surcouches de Hooky :
+//   @_spi(HookyWrapper) import Hooky
+@_spi(HookyWrapper)
+public extension Hooky {
+    /// The `X-Hooky-Client` value (`hooky-flutter/1.0.0`…), set before `configure`; `nil` for the default `hooky-ios/<version>`.
+    nonisolated static var clientName: String? {
+        get { SDKInfo.clientOverride.value }
+        set { SDKInfo.clientOverride.value = newValue }
+    }
+
+    /// The site's color (`#RRGGBB`), once its appearance is loaded.
+    var siteColor: String? { site?.color }
+
+    /// The side of the screen set for the site's bubble (`left` or `right`).
+    var sitePosition: String? { site?.position }
+}
+
 // Les événements de stats : envoyés hors du fil principal, mis de côté (100
 // au plus) tant que configure n'a pas été appelé.
 final class Tracker: @unchecked Sendable {

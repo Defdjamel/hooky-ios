@@ -36,7 +36,11 @@ struct OutgoingFile: Equatable, Sendable, Identifiable {
 
 enum SDKInfo {
     static let version = "1.0.0"
-    static let client = "hooky-ios/\(version)"
+
+    // « hooky-ios/1.0.0 », ou le nom qu'une surcouche du SDK s'est donné
+    // avant configure (le plugin Flutter : « hooky-flutter/… »).
+    static var client: String { clientOverride.value ?? "hooky-ios/\(version)" }
+    static let clientOverride = Locked<String?>(nil)
 
     // « com.exemple.app 2.1 (42) » : l'app qui embarque le SDK.
     static var app: String {
@@ -45,6 +49,19 @@ enum SDKInfo {
         let version = infos?["CFBundleShortVersionString"] as? String ?? "?"
         let build = infos?["CFBundleVersion"] as? String ?? "?"
         return "\(id) \(version) (\(build))"
+    }
+}
+
+// Une valeur partagée entre les fils, sous verrou.
+final class Locked<Value: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Value
+
+    init(_ value: Value) { stored = value }
+
+    var value: Value {
+        get { lock.lock(); defer { lock.unlock() }; return stored }
+        set { lock.lock(); stored = newValue; lock.unlock() }
     }
 }
 
