@@ -16,7 +16,11 @@ let package = Package(
     targets: [
         .target(
             name: "Hooky",
-            path: "Sources/Hooky"
+            path: "Sources/Hooky",
+            // Le manifeste de confidentialité, agrégé par Xcode à celui de l'app.
+            resources: [
+                .copy("PrivacyInfo.xcprivacy"),
+            ]
         ),
         .testTarget(
             name: "HookyTests",
