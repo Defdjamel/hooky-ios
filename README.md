@@ -5,16 +5,28 @@ A native chat between your users and your team, in three lines. The conversation
 - iOS 15+ and Mac Catalyst 15+
 - Swift 6, strict concurrency
 - No third-party dependency (URLSession, URLSessionWebSocketTask, PhotosUI, Keychain)
+- MIT license
 
 ## Installation
 
-Swift Package Manager: in Xcode, **File › Add Package Dependencies…**, then paste the repository URL. Or in `Package.swift`:
+Swift Package Manager, from GitHub: in Xcode, **File › Add Package Dependencies…**, paste
 
-```swift
-.package(url: "https://github.com/<owner>/hooky-ios.git", from: "1.0.0") // the public repository's URL
+```
+https://github.com/Defdjamel/hooky-ios
 ```
 
-and add `"Hooky"` to your target's dependencies.
+and pick **Up to Next Major Version** from `1.0.0`. Or in `Package.swift`:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/Defdjamel/hooky-ios", from: "1.0.0"),
+],
+targets: [
+    .target(name: "MyApp", dependencies: [.product(name: "Hooky", package: "hooky-ios")]),
+]
+```
+
+The package ships its privacy manifest (`PrivacyInfo.xcprivacy`), which Xcode merges into your app's privacy report.
 
 ## The three lines
 
@@ -149,3 +161,7 @@ xcodebuild test -scheme Hooky -destination 'platform=iOS Simulator,name=iPhone 1
 ```
 
 The example's UI tests (`Exemple/HookyExempleUITests`) run the whole journey against a Hooky server: first message with a photo, the team's live reply, the unread badge, the conversation resumed after a relaunch. See the comment at the top of `ParcoursUITests.swift`.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
