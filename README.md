@@ -49,7 +49,7 @@ Your site's public key is in Hooky › Sites › Install (the same key as the we
 
 | Call | What it does |
 | --- | --- |
-| `Hooky.configure(siteKey:apiURL:language:translation:)` | Starts the SDK: loads the site's name, color and greeting, resumes the saved conversation and opens the live connection. `apiURL` is for tests against your own server (default `https://api.heyhooky.com`); `language` forces `fr`, `en`, `es`, `pt`, `it` or `de` (the device language otherwise, English by default); `translation: false` hides the translation of the team's messages (on by default). |
+| `Hooky.configure(siteKey:apiURL:language:translation:)` | Starts the SDK: loads the site's name, color and greeting, resumes the saved conversation and opens the live connection. `apiURL` is for tests against your own server (default `https://api.heyhooky.com`); `language` forces `fr`, `en`, `es`, `pt`, `it` or `de` (the device language otherwise, English by default); `translation: false` turns off the translation of the team's messages (on by default). |
 | `Hooky.identify(name:email:userId:attributes:)` | Optional. Who the user is: name, email, your own user id and free data (see [Identify your users](#identify-your-users)). With an email, the chat skips its name and email form. |
 | `Hooky.setAttributes(_:)` | Adds free data about the user (`["plan": "Pro", "cart": 49.9]`), merged with the previous; `nil` removes a key. |
 | `Hooky.open()` / `Hooky.open(from:)` | Presents the conversation as a full-height sheet, from the top-most view controller or the one you give. |
@@ -131,14 +131,14 @@ To offer the camera, add `NSCameraUsageDescription` to your app's Info.plist; wi
 
 ## Translation
 
-When your team writes in another language than the chat's (`language`, or the device's), a discreet **Translate** link sits under the message. Translated, the message shows the text in the user's language with "Translated from English · See original" (a toggle). The translate button in the conversation's header offers **Always translate**: the team's messages then arrive translated, still with "See original". The setting is remembered on the device, per site key. Translations are kept in memory for the conversation (and by the server, so asking again costs nothing); a failed translation shows a short error with "Try again". The user's own messages are never translated.
+When your team writes in another language than the chat's (`language`, or the device's), the message arrives translated into the user's language, with "Translated from English · See original" (a toggle). A translate button in the conversation's header (shown once such a message is there) turns this off and on in one tap: off, the messages show as written, with a discreet **Translate** link under each; on again, they switch back to their translation. It's on by default; turning it off is remembered on the device, per site key. Translations are kept in memory for the conversation (and by the server, so asking again costs nothing); a failed translation shows a short error with "Try again". The user's own messages, messages already in the chat's language and emoji-only messages are never translated.
 
-It needs a Hooky server that tells each message's language: with an older one, no link appears. To turn it off: `Hooky.configure(siteKey: "…", translation: false)`.
+It needs a Hooky server that tells each message's language: with an older one, nothing is translated. To turn it off entirely (no translation, no button): `Hooky.configure(siteKey: "…", translation: false)`.
 
 ## What the SDK sends and stores
 
 - Every request carries `X-Hooky-Client: hooky-ios/<SDK version>` and `X-Hooky-App: <bundle id> <version> (<build>)` (also as `client` and `app` parameters on the WebSocket).
-- The conversation's token is kept in the Keychain (this device only, after first unlock), per site key, with the `userId` given to `identify`. The unsent draft, the last message seen and the "Always translate" setting are kept in `UserDefaults`.
+- The conversation's token is kept in the Keychain (this device only, after first unlock), per site key, with the `userId` given to `identify`. The unsent draft, the last message seen and the translation setting (once turned off) are kept in `UserDefaults`.
 - The device, readable: `iPhone 15 Pro · iOS 18.2`, `iPad Air 11-inch (M2) · iPadOS 18.1`, `Mac · macOS 15.1` (a model newer than the SDK shows as its identifier, like `iPhone19,1`).
 - Nothing else is collected: the same data as the web bubble (messages, files, the optional name and email, language and time zone so the team replies in the right language and at the right hour), plus what you pass to `identify` and `setAttributes`. A translation sends only the message's id and the chat's language.
 

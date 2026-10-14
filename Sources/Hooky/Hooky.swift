@@ -57,8 +57,9 @@ public final class Hooky: ObservableObject {
     ///   - siteKey: the site's public key (Hooky › Sites › Install).
     ///   - apiURL: the API address, for local tests (default `https://api.heyhooky.com`).
     ///   - language: forces the interface language (`fr`, `en`, `es`, `pt`, `it`, `de`); the device language otherwise.
-    ///   - translation: offers to translate the team's messages written in another language than the interface's
-    ///     (a “Translate” link under them, and “Always translate” in the conversation's menu). On by default.
+    ///   - translation: translates the team's messages written in another language than the interface's: they
+    ///     arrive translated, with “See original”, and the header's translate button turns it off and on (a
+    ///     “Translate” link under them when off). On by default; `false` shows neither.
     public static func configure(siteKey: String, apiURL: URL? = nil, language: String? = nil, translation: Bool = true) {
         shared.configure(siteKey: siteKey, apiURL: apiURL, language: language, translation: translation,
                          tokenStore: KeychainTokenStore(), defaults: .standard)

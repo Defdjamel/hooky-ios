@@ -1,8 +1,9 @@
 // La traduction des messages de l'équipe, comme dans widget/widget.js : un
 // message écrit dans une autre langue que celle de la bulle porte un bouton
 // « Traduire » ; traduit, il montre le texte dans la langue de la bulle et
-// « Traduit de l’anglais · Voir l’original ». « Toujours traduire » (menu de
-// l'en-tête, gardé par site sur l'appareil) les traduit dès leur arrivée.
+// « Traduit de l’anglais · Voir l’original ». « Toujours traduire » (le
+// bouton de l'en-tête, actif tant que le visiteur ne l'a pas coupé, gardé par
+// site sur l'appareil) les traduit dès leur arrivée.
 //
 // Les traductions restent en mémoire le temps de la conversation (le serveur
 // les garde aussi : les redemander ne coûte rien). Un serveur d'avant la
@@ -31,8 +32,10 @@ enum TranslationRules {
 extension ChatStore {
     private var alwaysTranslateKey: String { "hooky.translate.\(siteKey)" }
 
+    // Rien d'enregistré : actif. Seul « coupé » est noté (false) ; un ancien
+    // true reste actif.
     static func storedAlwaysTranslate(_ defaults: UserDefaults, siteKey: String) -> Bool {
-        defaults.bool(forKey: "hooky.translate.\(siteKey)")
+        defaults.object(forKey: "hooky.translate.\(siteKey)") as? Bool ?? true
     }
 
     // Ce message peut-il se traduire ici ?
@@ -40,10 +43,10 @@ extension ChatStore {
         translationEnabled && TranslationRules.offersButton(message, reader: texts.language)
     }
 
-    // Le menu « Toujours traduire » n'est proposé que s'il sert : un message
-    // de l'équipe dans une autre langue (ou le réglage déjà actif).
+    // Le bouton « Toujours traduire » n'est montré que s'il sert : un message
+    // de l'équipe dans une autre langue que celle de la bulle.
     var offersTranslation: Bool {
-        translationEnabled && (alwaysTranslate || messages.contains(where: canTranslate))
+        translationEnabled && messages.contains(where: canTranslate)
     }
 
     // Où en est ce message (nil : pas de traduction possible, ou pas encore demandée).
@@ -80,13 +83,23 @@ extension ChatStore {
 
     func setAlwaysTranslate(_ on: Bool) {
         alwaysTranslate = on
-        if on { defaults.set(true, forKey: alwaysTranslateKey) } else { defaults.removeObject(forKey: alwaysTranslateKey) }
+        defaults.set(on, forKey: alwaysTranslateKey)
         // Activé : les messages déjà traduits passent en traduction (les autres
-        // se traduisent) ; coupé : on relit les originaux.
+        // se traduisent) ; coupé : on relit les originaux, et ce qui attendait
+        // sa traduction n'est plus demandé (celle en route arrive en original).
         for (id, state) in translations {
-            if case .done(let body, let source, _) = state { translations[id] = .done(body: body, source: source, original: !on) }
+            switch state {
+            case .done(let body, let source, _): translations[id] = .done(body: body, source: source, original: !on)
+            case .loading where !on: translations[id] = nil
+            default: break
+            }
         }
-        if on { translateNewMessages() }
+        if on { translateNewMessages() } else { translationQueue = [] }
+    }
+
+    // Le bouton de l'en-tête : un toucher active ou coupe.
+    func toggleAlwaysTranslate() {
+        setAlwaysTranslate(!alwaysTranslate)
     }
 
     // « Toujours traduire » : chaque message qui peut l'être, une seule fois
@@ -114,6 +127,8 @@ extension ChatStore {
     }
 
     private func fetchTranslation(_ id: Int) async {
+        // Déjà là (redemandée pendant qu'elle était en route) : aucun appel.
+        guard translations[id] == .loading else { return }
         guard let token, let message = messages.first(where: { $0.id == id }), canTranslate(message) else {
             translations[id] = nil
             return
@@ -121,6 +136,8 @@ extension ChatStore {
         do {
             let t = try await api.translate(token: token, messageID: id, locale: texts.language)
             guard token == self.token else { return }
+            // Plus attendue (la traduction a été coupée en route) : gardée, en original.
+            let wanted = translations[id] == .loading
             let source = Texts.shortCode(t.sourceLocale ?? message.locale)
             if source == Texts.shortCode(texts.language) {
                 // Le message était déjà dans la langue de la bulle : plus de
@@ -128,13 +145,13 @@ extension ChatStore {
                 translations[id] = nil
                 setLocale(t.sourceLocale, ofMessage: id)
             } else {
-                translations[id] = .done(body: t.body, source: source, original: false)
+                translations[id] = .done(body: t.body, source: source, original: !wanted)
             }
         } catch is CancellationError {
             translations[id] = nil
         } catch {
             guard token == self.token else { return }
-            translations[id] = .failed
+            translations[id] = translations[id] == .loading ? .failed : nil
         }
     }
 

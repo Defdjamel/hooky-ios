@@ -120,7 +120,7 @@ struct ChatView: View {
             }
             Spacer(minLength: 8)
             if store.offersTranslation {
-                TranslationMenu(store: store, accent: accent)
+                AlwaysTranslateButton(store: store, accent: accent)
             }
             Button(action: close) {
                 Image(systemName: "xmark")
@@ -319,27 +319,37 @@ private struct BottomAnchored: ViewModifier {
 
 // MARK: - La traduction
 
-// Le menu de l'en-tête : « Toujours traduire », proposé dès qu'un message de
-// l'équipe est dans une autre langue.
-struct TranslationMenu: View {
+// Le bouton de l'en-tête : « Toujours traduire », montré dès qu'un message de
+// l'équipe est dans une autre langue. Un toucher active ou coupe ; actif, il
+// est plein (l'icône dans la couleur du site), coupé, discret et barré.
+struct AlwaysTranslateButton: View {
     @ObservedObject var store: ChatStore
     let accent: Accent
 
     var body: some View {
-        Menu {
-            Toggle(isOn: Binding(get: { store.alwaysTranslate }, set: { store.setAlwaysTranslate($0) })) {
-                Label(store.texts("toujours"), systemImage: "translate")
-            }
-            .accessibilityIdentifier("hooky.alwaysTranslate")
-        } label: {
+        let on = store.alwaysTranslate
+        Button { withAnimation(.easeOut(duration: 0.15)) { store.toggleAlwaysTranslate() } } label: {
             Image(systemName: "translate")
                 .font(.system(size: 15, weight: .bold))
+                .foregroundColor(on ? accent.color : accent.ink.opacity(0.75))
+                .overlay(slash.opacity(on ? 0 : 1))
                 .frame(width: 36, height: 36)
-                .background(Circle().fill(accent.ink.opacity(0.16)))
+                .background(Circle().fill(on ? accent.ink : accent.ink.opacity(0.16)))
                 .contentShape(Circle())
         }
-        .accessibilityLabel(Text(store.texts("options_trad")))
-        .accessibilityIdentifier("hooky.translationMenu")
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(store.texts("toujours")))
+        .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityIdentifier("hooky.alwaysTranslate")
+    }
+
+    // La barre en travers, comme les symboles « .slash ».
+    private var slash: some View {
+        Capsule()
+            .fill(accent.ink)
+            .frame(width: 2, height: 22)
+            .rotationEffect(.degrees(-45))
+            .accessibilityHidden(true)
     }
 }
 

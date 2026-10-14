@@ -52,10 +52,11 @@ final class ChatStore: ObservableObject {
     @Published var formEmail = ""
     @Published private(set) var identity: Identity?
     // La traduction des messages de l'équipe (voir Translation.swift) : où en
-    // est chacun, par id, et « Toujours traduire » (gardé par site).
+    // est chacun, par id, et « Toujours traduire » (actif par défaut, gardé
+    // par site).
     @Published var translations: [Int: TranslationState] = [:]
     @Published var alwaysTranslate: Bool
-    // Hooky.configure(translation: false) : ni bouton ni menu.
+    // Hooky.configure(translation: false) : ni « Traduire » ni bouton dans l'en-tête.
     @Published var translationEnabled: Bool
     var translationQueue: [Int] = []
     var translationTask: Task<Void, Never>?

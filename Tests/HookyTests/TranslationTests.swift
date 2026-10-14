@@ -1,7 +1,7 @@
 // La traduction des messages de l'équipe : la langue des messages décodée,
 // quand le bouton « Traduire » apparaît, la route contre un faux serveur, la
-// mémoire des traductions, l'erreur réessayable, « Toujours traduire »
-// (gardé par site) et les noms de langue.
+// mémoire des traductions, l'erreur réessayable, « Toujours traduire » (actif
+// par défaut, coupé gardé par site) et les noms de langue.
 import XCTest
 @testable import Hooky
 
@@ -49,7 +49,10 @@ final class TranslationTests: XCTestCase {
         }
     }
 
-    func loadedStore(language: String = "fr", translation: Bool = true) async -> ChatStore {
+    // alwaysTranslate : le réglage enregistré (nil : rien, donc actif). Coupé
+    // par défaut ici, pour essayer « Traduire » message par message.
+    func loadedStore(language: String = "fr", translation: Bool = true, alwaysTranslate: Bool? = false) async -> ChatStore {
+        if let alwaysTranslate { defaults.set(alwaysTranslate, forKey: "hooky.translate.KEY") }
         tokens.setToken("tok123", for: "KEY")
         let store = makeStore(language: language, translation: translation)
         await store.resume()
@@ -99,11 +102,15 @@ final class TranslationTests: XCTestCase {
 
     func testDisabledByConfigureShowsNothing() async {
         serve()
-        let store = await loadedStore(translation: false)
+        // Même avec « Toujours traduire » actif (rien d'enregistré).
+        let store = await loadedStore(translation: false, alwaysTranslate: nil)
+        XCTAssertTrue(store.alwaysTranslate)
         XCTAssertFalse(store.messages.contains(where: store.canTranslate))
         XCTAssertFalse(store.offersTranslation)
         store.translate(store.messages[1])
         XCTAssertNil(store.translations[2])
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertTrue(translationRequests.isEmpty)
     }
 
     // MARK: - La route
@@ -198,60 +205,101 @@ final class TranslationTests: XCTestCase {
 
     // MARK: - Toujours traduire
 
-    func testAlwaysTranslateIsRememberedPerSiteAndTranslatesArrivals() async {
+    func testTranslatesByDefaultOnResume() async {
         serve()
-        let store = await loadedStore()
-        XCTAssertFalse(store.alwaysTranslate)
-        store.translate(store.messages[1])
-        await waitFor("la première traduction") { store.shownBody(store.messages[1]) == "Traduction 2" }
-        store.toggleOriginal(store.messages[1])
-
-        store.setAlwaysTranslate(true)
-        XCTAssertTrue(defaults.bool(forKey: "hooky.translate.KEY"))
-        XCTAssertEqual(store.shownBody(store.messages[1]), "Traduction 2", "déjà traduit : affiché traduit, sans appel")
-        await waitFor("le reste traduit") { store.shownBody(store.messages[2]) == "Traduction 3" }
-        XCTAssertEqual(translationRequests.map(\.url.path), [
-            "/v1/widget/conversation/messages/2/translation", "/v1/widget/conversation/messages/3/translation",
-        ])
-
-        // Un message qui arrive en direct est traduit d'emblée.
-        store.receive(.message(Message(id: 5, sender: "team", authorName: "Sam", body: "See you", createdAt: Date(), locale: "en")))
-        await waitFor("le message en direct traduit") { store.shownBody(store.messages[4]) == "Traduction 5" }
-
-        // Coupé : on relit les originaux.
-        store.setAlwaysTranslate(false)
-        XCTAssertNil(defaults.object(forKey: "hooky.translate.KEY"))
-        XCTAssertEqual(store.shownBody(store.messages[1]), store.messages[1].body)
-        XCTAssertEqual(store.translationState(store.messages[2]), .done(body: "Traduction 3", source: "en", original: true))
-
-        // Gardé d'un lancement à l'autre, et au-delà d'un reset ; pas pour un autre site.
-        store.setAlwaysTranslate(true)
-        store.forget(clearIdentity: true)
-        XCTAssertTrue(store.translations.isEmpty, "la mémoire des traductions part avec la conversation")
-        XCTAssertTrue(makeStore().alwaysTranslate)
-        let other = ChatStore(siteKey: "AUTRE", api: store.api, texts: Texts(language: "fr"), tokenStore: tokens, defaults: defaults,
-                              observeLifecycle: false)
-        XCTAssertFalse(other.alwaysTranslate)
-    }
-
-    func testAlwaysTranslateOnResume() async {
-        defaults.set(true, forKey: "hooky.translate.KEY")
-        serve()
-        let store = await loadedStore()
+        let store = await loadedStore(alwaysTranslate: nil)
+        XCTAssertTrue(store.alwaysTranslate, "rien d'enregistré : actif")
         XCTAssertTrue(store.offersTranslation)
         await waitFor("le fil traduit à l'ouverture") {
             store.shownBody(store.messages[1]) == "Traduction 2" && store.shownBody(store.messages[2]) == "Traduction 3"
         }
+        // Ni ses propres messages, ni ceux dans la langue de la bulle.
+        XCTAssertEqual(store.shownBody(store.messages[0]), "Bonjour")
         XCTAssertEqual(store.shownBody(store.messages[3]), "Bonne journée")
+        XCTAssertEqual(translationRequests.map(\.url.path), [
+            "/v1/widget/conversation/messages/3/translation", "/v1/widget/conversation/messages/2/translation",
+        ], "du plus récent au plus ancien, une à la fois")
+        XCTAssertNil(defaults.object(forKey: "hooky.translate.KEY"), "rien n'est écrit tant qu'on ne coupe pas")
+
+        // Un message qui arrive en direct est traduit d'emblée.
+        store.receive(.message(Message(id: 5, sender: "team", authorName: "Sam", body: "See you", createdAt: Date(), locale: "en")))
+        await waitFor("le message en direct traduit") { store.shownBody(store.messages[4]) == "Traduction 5" }
+    }
+
+    func testOldTrueStaysOn() async {
+        serve()
+        let store = await loadedStore(alwaysTranslate: true)
+        XCTAssertTrue(store.alwaysTranslate)
+        await waitFor("le fil traduit à l'ouverture") {
+            store.shownBody(store.messages[1]) == "Traduction 2" && store.shownBody(store.messages[2]) == "Traduction 3"
+        }
         XCTAssertEqual(translationRequests.count, 2)
     }
 
-    func testMenuOnlyWhenUseful() async {
+    func testCutShowsOriginalsAndIsRememberedPerSite() async {
+        serve()
+        let store = await loadedStore(alwaysTranslate: nil)
+        await waitFor("le fil traduit") {
+            store.shownBody(store.messages[1]) == "Traduction 2" && store.shownBody(store.messages[2]) == "Traduction 3"
+        }
+
+        // Coupé (le bouton de l'en-tête) : les originaux, et « coupé » noté.
+        store.toggleAlwaysTranslate()
+        XCTAssertFalse(store.alwaysTranslate)
+        XCTAssertEqual(defaults.object(forKey: "hooky.translate.KEY") as? Bool, false)
+        XCTAssertEqual(store.shownBody(store.messages[1]), store.messages[1].body)
+        XCTAssertEqual(store.translationState(store.messages[2]), .done(body: "Traduction 3", source: "en", original: true),
+                       "« Voir la traduction » reste, sans appel")
+        XCTAssertTrue(store.offersTranslation, "le bouton reste pour réactiver")
+
+        // Un message qui arrive reste en original, avec « Traduire ».
+        store.receive(.message(Message(id: 5, sender: "team", authorName: "Sam", body: "See you", createdAt: Date(), locale: "en")))
+        XCTAssertNil(store.translationState(store.messages[4]))
+        XCTAssertTrue(store.canTranslate(store.messages[4]))
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(translationRequests.count, 2)
+
+        // Gardé d'un lancement à l'autre ; pas pour un autre site.
+        XCTAssertFalse(makeStore().alwaysTranslate)
+        let other = ChatStore(siteKey: "AUTRE", api: store.api, texts: Texts(language: "fr"), tokenStore: tokens, defaults: defaults,
+                              observeLifecycle: false)
+        XCTAssertTrue(other.alwaysTranslate)
+
+        // Réactivé : les traductions déjà là repassent, celles qui manquent se demandent.
+        store.toggleAlwaysTranslate()
+        XCTAssertTrue(store.alwaysTranslate)
+        XCTAssertEqual(defaults.object(forKey: "hooky.translate.KEY") as? Bool, true)
+        XCTAssertEqual(store.shownBody(store.messages[1]), "Traduction 2", "déjà traduit : affiché traduit, sans appel")
+        await waitFor("le message arrivé coupé, traduit") { store.shownBody(store.messages[4]) == "Traduction 5" }
+        XCTAssertEqual(translationRequests.count, 3)
+
+        // Au-delà d'un reset : le réglage reste, la mémoire des traductions part.
+        store.toggleAlwaysTranslate()
+        store.forget(clearIdentity: true)
+        XCTAssertTrue(store.translations.isEmpty, "la mémoire des traductions part avec la conversation")
+        XCTAssertFalse(store.alwaysTranslate)
+        XCTAssertFalse(makeStore().alwaysTranslate)
+    }
+
+    // Coupé pendant que le fil se traduit : rien ne s'affiche traduit, rien
+    // ne reste en « Traduction… », ce qui attendait n'est pas demandé.
+    func testCutWhileTranslating() async {
+        serve()
+        let store = await loadedStore(alwaysTranslate: nil)
+        store.setAlwaysTranslate(false)
+        await waitFor("la file vidée") { store.translationTask == nil }
+        for m in store.messages { XCTAssertEqual(store.shownBody(m), m.body) }
+        XCTAssertFalse(store.translations.values.contains { $0 == .loading || $0 == .failed })
+        XCTAssertLessThanOrEqual(translationRequests.count, 1)
+    }
+
+    func testButtonOnlyWhenUseful() async {
         StubServer.respond { req, _ in
             (200, Data(Fixtures.thread([Fixtures.message(id: 1, body: "Bonjour", locale: "fr")]).utf8))
         }
-        let store = await loadedStore()
-        XCTAssertFalse(store.offersTranslation, "tout est déjà en français")
+        let store = await loadedStore(alwaysTranslate: nil)
+        XCTAssertTrue(store.alwaysTranslate)
+        XCTAssertFalse(store.offersTranslation, "tout est déjà en français : pas de bouton, même actif")
         store.receive(.message(Message(id: 2, sender: "team", body: "Hello", createdAt: Date(), locale: "en")))
         XCTAssertTrue(store.offersTranslation)
     }
@@ -274,7 +322,7 @@ final class TranslationTests: XCTestCase {
         XCTAssertEqual(Texts.shortCode(nil), "")
         for language in Texts.languages {
             let t = Texts(language: language)
-            for key in ["traduire", "traduction", "voir_original", "voir_traduction", "trad_erreur", "reessayer", "toujours", "options_trad"] {
+            for key in ["traduire", "traduction", "voir_original", "voir_traduction", "trad_erreur", "reessayer", "toujours"] {
                 XCTAssertNotNil(Texts.table[language]?[key], "\(language).\(key)")
             }
             XCTAssertFalse(t("traduire").isEmpty)

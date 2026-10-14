@@ -168,7 +168,6 @@ struct Texts: Sendable {
             "trad_erreur": "Traduction impossible.",
             "reessayer": "Réessayer",
             "toujours": "Toujours traduire",
-            "options_trad": "Traduction",
         ],
         "en": [
             "masquer": "Hide this message",
@@ -224,7 +223,6 @@ struct Texts: Sendable {
             "trad_erreur": "Couldn’t translate.",
             "reessayer": "Try again",
             "toujours": "Always translate",
-            "options_trad": "Translation",
         ],
         "es": [
             "masquer": "Ocultar este mensaje",
@@ -280,7 +278,6 @@ struct Texts: Sendable {
             "trad_erreur": "No se pudo traducir.",
             "reessayer": "Reintentar",
             "toujours": "Traducir siempre",
-            "options_trad": "Traducción",
         ],
         "pt": [
             "masquer": "Ocultar esta mensagem",
@@ -336,7 +333,6 @@ struct Texts: Sendable {
             "trad_erreur": "Não foi possível traduzir.",
             "reessayer": "Tentar de novo",
             "toujours": "Traduzir sempre",
-            "options_trad": "Tradução",
         ],
         "it": [
             "masquer": "Nascondi questo messaggio",
@@ -392,7 +388,6 @@ struct Texts: Sendable {
             "trad_erreur": "Traduzione non riuscita.",
             "reessayer": "Riprova",
             "toujours": "Traduci sempre",
-            "options_trad": "Traduzione",
         ],
         "de": [
             "masquer": "Diese Nachricht ausblenden",
@@ -448,7 +443,6 @@ struct Texts: Sendable {
             "trad_erreur": "Übersetzung fehlgeschlagen.",
             "reessayer": "Erneut versuchen",
             "toujours": "Immer übersetzen",
-            "options_trad": "Übersetzung",
         ],
     ]
 }
