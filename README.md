@@ -15,11 +15,11 @@ Swift Package Manager, from GitHub: in Xcode, **File › Add Package Dependencie
 https://github.com/Defdjamel/hooky-ios
 ```
 
-and pick **Up to Next Major Version** from `1.0.0`. Or in `Package.swift`:
+and pick **Up to Next Major Version** from `1.0.1`. Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Defdjamel/hooky-ios", from: "1.0.0"),
+    .package(url: "https://github.com/Defdjamel/hooky-ios", from: "1.0.1"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "Hooky", package: "hooky-ios")]),

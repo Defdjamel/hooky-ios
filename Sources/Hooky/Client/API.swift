@@ -35,9 +35,9 @@ struct OutgoingFile: Equatable, Sendable, Identifiable {
 }
 
 enum SDKInfo {
-    static let version = "1.0.0"
+    static let version = "1.0.1"
 
-    // « hooky-ios/1.0.0 », ou le nom qu'une surcouche du SDK s'est donné
+    // « hooky-ios/1.0.1 », ou le nom qu'une surcouche du SDK s'est donné
     // avant configure (le plugin Flutter : « hooky-flutter/… »).
     static var client: String { clientOverride.value ?? "hooky-ios/\(version)" }
     static let clientOverride = Locked<String?>(nil)

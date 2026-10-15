@@ -220,7 +220,7 @@ public final class Hooky: ObservableObject {
 //   @_spi(HookyWrapper) import Hooky
 @_spi(HookyWrapper)
 public extension Hooky {
-    /// The `X-Hooky-Client` value (`hooky-flutter/1.0.0`…), set before `configure`; `nil` for the default `hooky-ios/<version>`.
+    /// The `X-Hooky-Client` value (`hooky-flutter/1.0.1`…), set before `configure`; `nil` for the default `hooky-ios/<version>`.
     nonisolated static var clientName: String? {
         get { SDKInfo.clientOverride.value }
         set { SDKInfo.clientOverride.value = newValue }
