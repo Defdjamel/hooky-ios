@@ -2,19 +2,20 @@
 // au-dessus d'une série, le nom de l'auteur (équipe) en tête de série,
 // l'heure sous le dernier message d'une série, et « Lu » sous le dernier
 // message du visiteur quand l'équipe l'a lu. Une série : même expéditeur,
-// même auteur, moins de 5 minutes d'écart, le même jour.
+// même auteur (l'agent IA à part), moins de 5 minutes d'écart, le même jour.
+// Les messages de l'agent portent l'étiquette « Assistant IA » près du nom.
 import Foundation
 
 enum ThreadItem: Equatable, Identifiable {
     case day(Date)
-    case author(String, messageID: Int)
+    case author(String, messageID: Int, bot: Bool = false)
     case message(Message, first: Bool, last: Bool)
     case time(Date, fromTeam: Bool, read: Bool, messageID: Int)
 
     var id: String {
         switch self {
         case .day(let d): "d\(Int(d.timeIntervalSince1970))"
-        case .author(_, let id): "a\(id)"
+        case .author(_, let id, _): "a\(id)"
         case .message(let m, _, _): "m\(m.id)"
         case .time(_, _, _, let id): "h\(id)"
         }
@@ -26,7 +27,7 @@ enum ThreadLayout {
 
     static func sameSeries(_ a: Message?, _ b: Message?, calendar: Calendar = .current) -> Bool {
         guard let a, let b else { return false }
-        return a.sender == b.sender && a.authorName == b.authorName
+        return a.sender == b.sender && a.authorName == b.authorName && a.bot == b.bot
             && b.createdAt.timeIntervalSince(a.createdAt) < seriesGap
             && calendar.isDate(a.createdAt, inSameDayAs: b.createdAt)
     }
@@ -47,7 +48,7 @@ enum ThreadLayout {
 
             if newDay { items.append(.day(calendar.startOfDay(for: m.createdAt))) }
             if m.fromTeam, first, let author = m.authorName, !author.isEmpty {
-                items.append(.author(author, messageID: m.id))
+                items.append(.author(author, messageID: m.id, bot: m.bot))
             }
             items.append(.message(m, first: first, last: last))
             if last {

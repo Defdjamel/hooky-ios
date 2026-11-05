@@ -1,7 +1,9 @@
 // L'état de la bulle et sa logique, comme le cœur de widget/widget.js :
 // l'apparence du site, le jeton (trousseau), le fil, l'envoi (texte et
 // fichiers, avec progression, le message déjà affiché, estompé), le temps
-// réel, « Lu », « … écrit », les non-lus, le brouillon gardé.
+// réel, « Lu », « … écrit », les non-lus, le brouillon gardé ; l'agent IA
+// (voir Agent.swift) : « Parler à un humain », l'e-mail demandé au passage,
+// les choix rapides, la révélation progressive de ses réponses.
 //
 // Un seul ChatStore par clé de site, tenu par Hooky.shared : il survit à la
 // fermeture de la conversation (le brouillon, les fichiers choisis et la
@@ -30,7 +32,7 @@ final class ChatStore: ObservableObject {
 
     @Published private(set) var site: WidgetSite?
     @Published private(set) var token: String?
-    @Published private(set) var conversation: VisitorConversation?
+    @Published var conversation: VisitorConversation?
     @Published private(set) var messages: [Message] = []
     @Published private(set) var hasMore = false
     @Published private(set) var loadingOlder = false
@@ -60,6 +62,19 @@ final class ChatStore: ObservableObject {
     @Published var translationEnabled: Bool
     var translationQueue: [Int] = []
     var translationTask: Task<Void, Never>?
+    // L'agent IA (Agent.swift) : la demande de passage à un humain, la carte
+    // qui demande l'e-mail, la réponse en cours de révélation.
+    @Published var handoff: HandoffState?
+    @Published var handoffEmail: HandoffEmailState?
+    @Published var handoffEmailText = ""
+    @Published var reveal: Reveal?
+    var revealTask: Task<Void, Never>?
+    // Les réponses de l'agent arrivées en direct, à révéler à leur affichage.
+    var toReveal: Set<Int> = []
+    // Réduire les animations ou VoiceOver : les réponses s'affichent d'un coup.
+    var revealAllowed: @MainActor () -> Bool = { !UIAccessibility.isReduceMotionEnabled && !UIAccessibility.isVoiceOverRunning }
+    // Hooky.track, remplaçable par les tests.
+    var trackEvent: @MainActor (String, [String: HookyValue]) -> Void = { name, properties in Hooky.track(name, properties: properties) }
 
     struct Identity: Equatable {
         var name: String?
@@ -74,7 +89,7 @@ final class ChatStore: ObservableObject {
     // pendant cette vie de l'app : un identify répété à chaque lancement ne
     // part qu'une fois).
     private(set) var profileChanges = ProfileChanges()
-    private var profileKnown = ProfileChanges()
+    var profileKnown = ProfileChanges()
     private var patchTask: Task<Void, Never>?
     private var patchScheduled = false
     // Plusieurs changements en moins d'une seconde : un seul appel.
@@ -101,7 +116,7 @@ final class ChatStore: ObservableObject {
     private let makeCable: @MainActor (URL, String) -> ConversationCable
     private let log = Logger(subsystem: "com.heyhooky.sdk", category: "Hooky")
     private var cable: ConversationCable?
-    private var appActive = true
+    private(set) var appActive = true
     private var typingTimer: Task<Void, Never>?
     private var lastReadSent: Int?
     private var lastLinksRefresh = Date.distantPast
@@ -196,6 +211,7 @@ final class ChatStore: ObservableObject {
         messages = all
         updateUnread()
         translateNewMessages()
+        startNotedReveal()
     }
 
     // La langue d'un message corrigée par la traduction.
@@ -273,6 +289,9 @@ final class ChatStore: ObservableObject {
     func receive(_ event: CableEvent) {
         switch event {
         case .message(let m):
+            // Un autre message pendant une révélation : elle se termine d'un coup.
+            if reveal?.id != m.id { finishReveal() }
+            noteToReveal([m])
             add([m])
             if m.fromTeam {
                 teamTypingName = nil
@@ -291,6 +310,9 @@ final class ChatStore: ObservableObject {
         case .read(let sender, let readAt):
             guard sender == "team" else { return }
             teamReadAt = readAt
+        case .handoff(let reason):
+            // L'équipe qui répond n'a pas besoin de l'e-mail : elle est là.
+            handedToHuman(askEmail: reason != "team")
         }
     }
 
@@ -342,6 +364,7 @@ final class ChatStore: ObservableObject {
     func setPresented(_ presented: Bool) {
         guard presented != isPresented else { return }
         isPresented = presented
+        if !presented { finishReveal() }
         if presented {
             if site == nil { Task { await loadSite() } }
             markRead()
@@ -454,8 +477,9 @@ final class ChatStore: ObservableObject {
     }
 
     @discardableResult
-    func send(_ body: String, files: [OutgoingFile]) async -> Bool {
+    func send(_ body: String, files: [OutgoingFile], choice: (replyTo: Int, id: String)? = nil) async -> Bool {
         let first = token == nil
+        finishReveal()
         error = nil
         pending = Pending(body: body, files: files, progress: files.isEmpty ? nil : 0, startedAt: Date(),
                           previews: files.filter(\.isImage).compactMap { UIImage(contentsOfFile: $0.url.path) })
@@ -486,12 +510,19 @@ final class ChatStore: ObservableObject {
                 profileKnown = ProfileChanges(name: cleaned(name), email: cleaned(email), userID: user,
                                               attributes: extra.mapValues { $0 })
                 held = nil
+                noteToReveal(r.messages)
                 load(r)
                 connect()
             } else {
                 guard let token else { throw HookyError.notConfigured }
-                let m = try await api.sendMessage(token: token, body: body, files: files, progress: progress)
+                let m: Message
+                if let choice {
+                    m = try await api.sendChoice(token: token, replyTo: choice.replyTo, choice: choice.id)
+                } else {
+                    m = try await api.sendMessage(token: token, body: body, files: files, progress: progress)
+                }
                 await ImageCache.shared.seed(files, for: [m])
+                noteToReveal([m])
                 add([m])
                 // Un message du visiteur rouvre une conversation close.
                 conversation?.closed = false
@@ -576,6 +607,11 @@ final class ChatStore: ObservableObject {
         lastReadSent = nil
         lastSeenTeamID = nil
         unreadCount = 0
+        handoff = nil
+        handoffEmail = nil
+        handoffEmailText = ""
+        finishReveal()
+        toReveal = []
         // « Toujours traduire » est un réglage de l'appareil : il reste.
         forgetTranslations()
         if clearIdentity {
@@ -595,6 +631,7 @@ final class ChatStore: ObservableObject {
     // le fil est relu (à la confirmation de l'abonnement).
     func appDidEnterBackground() {
         appActive = false
+        finishReveal()
         disconnect()
     }
 
@@ -623,6 +660,7 @@ final class ChatStore: ObservableObject {
         siteTask?.cancel()
         patchTask?.cancel()
         translationTask?.cancel()
+        revealTask?.cancel()
         disconnect()
     }
 }

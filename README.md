@@ -15,11 +15,11 @@ Swift Package Manager, from GitHub: in Xcode, **File › Add Package Dependencie
 https://github.com/Defdjamel/hooky-ios
 ```
 
-and pick **Up to Next Major Version** from `1.0.1`. Or in `Package.swift`:
+and pick **Up to Next Major Version** from `1.1.0`. Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Defdjamel/hooky-ios", from: "1.0.1"),
+    .package(url: "https://github.com/Defdjamel/hooky-ios", from: "1.1.0"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "Hooky", package: "hooky-ios")]),
@@ -134,6 +134,17 @@ To offer the camera, add `NSCameraUsageDescription` to your app's Info.plist; wi
 When your team writes in another language than the chat's (`language`, or the device's), the message arrives translated into the user's language, with "Translated from English · See original" (a toggle). A translate button in the conversation's header (shown once such a message is there) turns this off and on in one tap: off, the messages show as written, with a discreet **Translate** link under each; on again, they switch back to their translation. It's on by default; turning it off is remembered on the device, per site key. Translations are kept in memory for the conversation (and by the server, so asking again costs nothing); a failed translation shows a short error with "Try again". The user's own messages, messages already in the chat's language and emoji-only messages are never translated.
 
 It needs a Hooky server that tells each message's language: with an older one, nothing is translated. To turn it off entirely (no translation, no button): `Hooky.configure(siteKey: "…", translation: false)`.
+
+## AI agent
+
+When the site's AI agent is on (Hooky › AI agent, paid plans), the native chat shows it like the web bubble, with nothing to set up in your app:
+
+- **Disclosure.** Until the agent has replied, a notice above the input says "You're chatting with an AI assistant. A human can take over." Its messages carry an **AI assistant** label next to their author.
+- **Talk to a human.** Once the agent has replied, a "Talk to a human" button replaces the notice: the conversation goes to your team (which is notified then, not before). If the chat doesn't know the user's email (neither `identify` nor the form gave it), a small card asks for it, so they get the team's reply if they leave ("Later" closes it). The same happens when the agent hands over by itself.
+- **Rich replies.** Under its text, the agent can show up to 3 product cards (photo, name, price, availability, **View**), stacked, a link button to a page of the site, and up to 4 quick replies. Quick replies are tappable on the last message only; a tap sends the choice as the user's message. Opening a product counts an `agent_product_click` event (with its `url`) in the site's stats, like `Hooky.track`.
+- **Progressive reveal.** A reply arriving live appears word by word, then each card, the link and the quick replies. The thread follows it down only if the user was at the bottom; scrolling up to read stops it. With **Reduce Motion** or VoiceOver on, replies appear at once, and VoiceOver always reads the whole message, once.
+
+An older Hooky server, or an unknown kind of content from a newer one, is simply ignored: the message's text always shows.
 
 ## What the SDK sends and stores
 

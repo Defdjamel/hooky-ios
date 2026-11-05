@@ -6,7 +6,7 @@
 // - à l'accueil (welcome), abonnement à ConversationChannel ; à la
 //   confirmation, rattrapage (le fil est relu : rien de manqué pendant la
 //   coupure) ; un refus veut dire que le jeton ne vaut plus rien ;
-// - événements message, typing et read ; « typing » envoyé au plus toutes
+// - événements message, typing, read et handoff (l'agent IA passe la main) ; « typing » envoyé au plus toutes
 //   les 2 s ;
 // - reconnexion avec un délai qui double (1 s, 2 s, 4 s… 30 s au plus) ; le
 //   serveur envoie un ping toutes les 3 s : sans nouvelles depuis 10 s, la
@@ -17,6 +17,8 @@ enum CableEvent: Equatable, Sendable {
     case message(Message)
     case typing(sender: String, authorName: String?)
     case read(sender: String, readAt: Date?)
+    // L'agent IA a passé la main (reason : visitor, agent, quota, error, team).
+    case handoff(reason: String?)
 }
 
 // Une trame reçue, déjà comprise.
@@ -48,6 +50,8 @@ enum CableFrame: Equatable, Sendable {
             return .event(.typing(sender: message["sender"] as? String ?? "", authorName: message["author_name"] as? String))
         case "read":
             return .event(.read(sender: message["sender"] as? String ?? "", readAt: (message["read_at"] as? String).flatMap(JSON.date)))
+        case "handoff":
+            return .event(.handoff(reason: message["reason"] as? String))
         default:
             return .ignored
         }

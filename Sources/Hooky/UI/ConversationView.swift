@@ -1,8 +1,11 @@
 // La conversation : l'en-tête à la couleur du site, le fil (jours, séries,
 // heure, « Lu », « … écrit », le message en route avec sa progression), et
 // la saisie. Avant le premier message : l'accueil du site, puis le prénom et
-// l'e-mail, facultatifs (sauf si l'app a appelé identify). Même rendu que
-// la bulle web (widget/widget.js), dans le style des apps Hooky.
+// l'e-mail, facultatifs (sauf si l'app a appelé identify). L'agent IA
+// (AgentViews.swift) : l'étiquette de ses messages, leurs blocs, la mention,
+// « Parler à un humain », la carte de l'e-mail, ses réponses révélées au fur
+// et à mesure (le fil suit s'il était en bas). Même rendu que la bulle web
+// (widget/widget.js), dans le style des apps Hooky.
 import SwiftUI
 import UIKit
 import QuickLook
@@ -37,6 +40,14 @@ struct ChatView: View {
     @State private var photos = false
     @State private var camera = false
     @State private var files = false
+    // Où en est le fil : la distance de son bas à celui de l'écran, le
+    // défilement depuis le haut ; pendant une révélation, le suivi.
+    @State private var bottomGap: CGFloat = 0
+    @State private var scrollTop: CGFloat = 0
+    @State private var viewport: CGFloat = 0
+    @State private var contentFrame: CGRect = .zero
+    @State private var following = true
+    @State private var highestTop: CGFloat = 0
 
     private var t: Texts { store.texts }
     private var accent: Accent { Accent(hex: store.accent) }
@@ -45,6 +56,7 @@ struct ChatView: View {
         VStack(spacing: 0) {
             header
             thread
+            AgentBar(store: store)
             Composer(store: store, accent: accent, choose: choose)
         }
         .background(Theme.background.ignoresSafeArea())
@@ -88,6 +100,39 @@ struct ChatView: View {
             } else {
                 proxy.scrollTo("bottom", anchor: .bottom)
             }
+        }
+    }
+
+    static let space = "hooky.fil"
+
+    // Un nouveau message : le fil descend s'il était en bas, ou si c'est le
+    // visiteur qui écrit. Le visiteur qui remonte pour relire n'est pas ramené.
+    private func newMessage(_ proxy: ScrollViewProxy) {
+        if store.messages.last?.fromTeam == false || following || bottomGap < 120 {
+            toBottom(proxy)
+        }
+    }
+
+    // Comme defilementPendantRevelation de widget.js : une montée vient du
+    // visiteur (le suivi ne fait que descendre) et coupe le suivi ; s'il
+    // redescend jusqu'en bas, il reprend (à 120 points près : le texte a pu
+    // grandir pendant son geste).
+    private func scrolled() {
+        let top = -contentFrame.minY
+        let gap = contentFrame.maxY - viewport
+        defer {
+            scrollTop = top
+            bottomGap = gap
+        }
+        guard store.reveal != nil else {
+            following = gap < 8
+            return
+        }
+        if following {
+            if top < highestTop - 10 { following = false } else { highestTop = max(highestTop, top) }
+        } else if gap < 8 || (top > scrollTop && gap < 120) {
+            following = true
+            highestTop = top
         }
     }
 
@@ -155,6 +200,10 @@ struct ChatView: View {
                         PendingRow(pending: pending, accent: accent, texts: t)
                             .id("pending")
                     }
+                    if store.handoffEmail != nil, store.hasConversation {
+                        HandoffEmailCard(store: store, accent: accent)
+                            .id("handoffEmail")
+                    }
                     if let name = store.teamTypingName {
                         TypingRow(text: t("ecrit", ["nom": name]))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -170,13 +219,44 @@ struct ChatView: View {
                 .frame(maxWidth: .infinity)
                 // Toucher le fil range le clavier.
                 .background(Color.clear.contentShape(Rectangle()).onTapGesture(perform: hideKeyboard))
+                .background(GeometryReader { g in
+                    Color.clear.preference(key: ContentFrameKey.self, value: g.frame(in: .named(Self.space)))
+                })
                 .animation(.easeOut(duration: 0.2), value: store.teamTypingName)
+            }
+            .coordinateSpace(name: Self.space)
+            .background(GeometryReader { g in
+                Color.clear.preference(key: ViewportKey.self, value: g.size.height)
+            })
+            .onPreferenceChange(ContentFrameKey.self) { frame in
+                contentFrame = frame
+                scrolled()
+            }
+            .onPreferenceChange(ViewportKey.self) { height in
+                viewport = height
+                scrolled()
             }
             .modifier(DismissKeyboardOnScroll())
             .modifier(BottomAnchored())
             .onAppear { toBottom(proxy, animated: false) }
-            .onChange(of: store.messages.last?.id) { _ in toBottom(proxy) }
-            .onChange(of: store.messages.count) { _ in toBottom(proxy) }
+            .onChange(of: store.messages.last?.id) { _ in newMessage(proxy) }
+            .onChange(of: store.messages.count) { _ in newMessage(proxy) }
+            // Une réponse de l'agent qui se révèle : le fil glisse vers le
+            // bas tant que le visiteur y était.
+            .onChange(of: store.reveal?.id) { id in
+                if id != nil {
+                    following = bottomGap < 8 || following
+                    highestTop = scrollTop
+                } else if following {
+                    toBottom(proxy)
+                }
+            }
+            .onChange(of: store.reveal?.step) { _ in
+                if following, store.reveal != nil { proxy.scrollTo("bottom", anchor: .bottom) }
+            }
+            .onChange(of: store.handoffEmail != nil) { shown in
+                if shown, bottomGap < 120 { toBottom(proxy) }
+            }
             .onChange(of: store.pending?.startedAt) { _ in toBottom(proxy) }
             .onChange(of: store.teamTypingName != nil) { typing in
                 if typing { toBottom(proxy) }
@@ -217,10 +297,14 @@ struct ChatView: View {
                     .background(Capsule().fill(Theme.soft))
                     .padding(.top, 10)
                     .padding(.bottom, 4)
-            case .author(let name, _):
-                Text(name)
+            case .author(let name, _, let bot):
+                HStack(spacing: 6) {
+                    Text(name)
+                    if bot { AIBadge(text: t("assistant_ia")) }
+                }
                     .font(.caption.weight(.bold))
                     .foregroundColor(Theme.secondary)
+                    .accessibilityElement(children: .combine)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.leading, 6)
                     .padding(.top, 10)
@@ -234,7 +318,11 @@ struct ChatView: View {
                            translatable: store.canTranslate(m),
                            translation: store.translationState(m),
                            translate: { store.translate(m) },
-                           toggleOriginal: { store.toggleOriginal(m) })
+                           toggleOriginal: { store.toggleOriginal(m) },
+                           reveal: store.revealOf(m),
+                           showsQuickReplies: store.showsQuickReplies(m),
+                           choose: { option in Task { await store.choose(option, of: m) } },
+                           openProduct: { url in store.productOpened(url) })
             case .time(let date, let fromTeam, let read, _):
                 (Text(t.time(date)) + (read ? Text(" · ") + Text(t("lu")).foregroundColor(Theme.read).fontWeight(.semibold) : Text("")))
                     .font(.caption2)
@@ -461,11 +549,19 @@ struct MessageRow: View {
     var translation: TranslationState?
     var translate: () -> Void = {}
     var toggleOriginal: () -> Void = {}
+    // L'agent IA : la révélation en cours, les choix rapides (dernier
+    // message seulement), un choix touché, une fiche ouverte.
+    var reveal: Reveal?
+    var showsQuickReplies = false
+    var choose: (QuickReply) -> Void = { _ in }
+    var openProduct: (URL) -> Void = { _ in }
 
     init(message: Message, first: Bool, last: Bool, accent: Accent, texts: Texts, downloading: Int?,
          openImage: @escaping (Int) -> Void, openFile: @escaping (Attachment) -> Void, onExpired: @escaping () -> Void,
          shownText: String? = nil, translatable: Bool = false, translation: TranslationState? = nil,
-         translate: @escaping () -> Void = {}, toggleOriginal: @escaping () -> Void = {}) {
+         translate: @escaping () -> Void = {}, toggleOriginal: @escaping () -> Void = {},
+         reveal: Reveal? = nil, showsQuickReplies: Bool = false,
+         choose: @escaping (QuickReply) -> Void = { _ in }, openProduct: @escaping (URL) -> Void = { _ in }) {
         self.message = message
         self.first = first
         self.last = last
@@ -480,13 +576,19 @@ struct MessageRow: View {
         self.translation = translation
         self.translate = translate
         self.toggleOriginal = toggleOriginal
+        self.reveal = reveal
+        self.showsQuickReplies = showsQuickReplies
+        self.choose = choose
+        self.openProduct = openProduct
     }
 
     static let photoWidth: CGFloat = 240
 
     // Le texte, dans sa langue pour VoiceOver.
-    private var text: AttributedString {
-        var a = Formatting.attributed(shownText)
+    private var text: AttributedString { attributed(shownText) }
+
+    private func attributed(_ string: String) -> AttributedString {
+        var a = Formatting.attributed(string)
         let translated: Bool
         if case .done(_, _, false) = translation { translated = true } else { translated = false }
         if let code = translated ? texts.language : message.locale { a.languageIdentifier = code }
@@ -495,7 +597,7 @@ struct MessageRow: View {
 
     var body: some View {
         let team = message.fromTeam
-        let emoji = message.attachments.isEmpty ? Formatting.emojiOnlyCount(message.body) : 0
+        let emoji = message.attachments.isEmpty && message.blocks.isEmpty ? Formatting.emojiOnlyCount(message.body) : 0
         let shape = BubbleShape(fromTeam: team, first: first, last: last)
         VStack(alignment: team ? .leading : .trailing, spacing: 4) {
             if !message.images.isEmpty {
@@ -517,8 +619,10 @@ struct MessageRow: View {
                 Text(message.body)
                     .font(.system(size: emoji == 1 ? 48 : emoji == 2 ? 42 : 36))
                     .padding(.horizontal, 2)
-            } else if !message.body.isEmpty {
-                Text(text)
+            } else if !message.body.isEmpty, reveal?.shownWords != 0 {
+                // Pendant la révélation, le texte grandit mot par mot ;
+                // VoiceOver lit toujours le message entier, une fois.
+                Text(reveal.map { attributed($0.shownText(shownText)) } ?? text)
                     .font(.body)
                     .foregroundColor(team ? Theme.ink : accent.ink)
                     .tint(team ? accent.color : accent.ink)
@@ -528,9 +632,14 @@ struct MessageRow: View {
                     .padding(.vertical, 9)
                     .background(shape.fill(team ? Theme.card : accent.color))
                     .overlay(shape.stroke(team ? Theme.hairline : Color.clear, lineWidth: 1.5))
+                    .modifier(WholeLabel(text: reveal == nil ? nil : text))
             }
             if translatable {
                 TranslationLine(state: translation, texts: texts, translate: translate, toggle: toggleOriginal)
+            }
+            if !message.blocks.isEmpty, reveal?.textDone ?? true {
+                AgentBlocks(message: message, accent: accent, texts: texts, showsQuickReplies: showsQuickReplies,
+                            shownUnits: reveal?.shownUnits, choose: choose, openProduct: openProduct)
             }
         }
         .frame(maxWidth: .infinity, alignment: team ? .leading : .trailing)
@@ -663,5 +772,26 @@ struct VisitorForm: View {
                 .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.soft))
                 .accessibilityLabel(Text("\(label), \(help)"))
         }
+    }
+}
+
+// La place du contenu du fil et la hauteur de l'écran du fil.
+private struct ContentFrameKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) { value = nextValue() }
+}
+
+private struct ViewportKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
+// Pendant une révélation, VoiceOver lit le texte entier (et une seule fois),
+// pas ce qui est déjà apparu ; le reste du temps, le texte tel quel (liens compris).
+private struct WholeLabel: ViewModifier {
+    let text: AttributedString?
+
+    func body(content: Content) -> some View {
+        if let text { content.accessibilityLabel(Text(text)) } else { content }
     }
 }

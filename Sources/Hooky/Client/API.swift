@@ -35,9 +35,9 @@ struct OutgoingFile: Equatable, Sendable, Identifiable {
 }
 
 enum SDKInfo {
-    static let version = "1.0.1"
+    static let version = "1.1.0"
 
-    // « hooky-ios/1.0.1 », ou le nom qu'une surcouche du SDK s'est donné
+    // « hooky-ios/1.1.0 », ou le nom qu'une surcouche du SDK s'est donné
     // avant configure (le plugin Flutter : « hooky-flutter/… »).
     static var client: String { clientOverride.value ?? "hooky-ios/\(version)" }
     static let clientOverride = Locked<String?>(nil)
@@ -118,6 +118,18 @@ struct HookyAPI: Sendable {
         }
         return try await upload("/v1/widget/conversation/messages", token: token, fields: [("body", body)], files: files,
                                 progress: progress, MessageResponse.self).message
+    }
+
+    // Un choix rapide de l'agent IA touché : le serveur écrit lui-même son
+    // libellé comme texte du message.
+    func sendChoice(token: String, replyTo messageID: Int, choice: String) async throws -> Message {
+        try await json("POST", "/v1/widget/conversation/messages", token: token,
+                       body: ["reply_to_id": messageID, "choice": choice], MessageResponse.self).message
+    }
+
+    // « Parler à un humain » : l'agent IA se tait, l'équipe est prévenue.
+    func handoff(token: String) async throws -> VisitorConversation {
+        try await json("POST", "/v1/widget/conversation/handoff", token: token, ConversationResponse.self).conversation
     }
 
     // Les derniers messages ; before: pour remonter le fil.
